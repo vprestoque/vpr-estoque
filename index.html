@@ -337,34 +337,60 @@
 // ─── CAMPOS EXTRAS POR CATEGORIA ────────────────────────────
 const EXTRA_CONFIG = {
   100: { label:'🔵 Especificações da Roda', fields:[
-    {id:'aro',    label:'Aro',     ph:'Ex: 17'},
-    {id:'tala',   label:'Tala',   ph:'Ex: 7.5'},
-    {id:'offset', label:'Off-Set',ph:'Ex: +40'},
-    {id:'furacao',label:'Furação',ph:'Ex: 5x114'},
-    {id:'cor',    label:'Cor',    ph:'Ex: Prata Diamante'},
+    {id:'aro',       label:'Aro',            ph:'Ex: 17'},
+    {id:'tala',      label:'Tala',           ph:'Ex: 7.5'},
+    {id:'offset',    label:'Off-Set',        ph:'Ex: +40'},
+    {id:'furacao',   label:'Furação',        ph:'Ex: 5x114'},
+    {id:'cor',       label:'Cor',            ph:'Ex: Prata Diamante'},
+    {id:'cubagem',   label:'Cubagem',        ph:'Ex: 0.5 m³'},
+    {id:'peso',      label:'Peso (kg)',      ph:'Ex: 8.5'},
+    {id:'med_emb',   label:'Medida Embalagem', ph:'Ex: 60x60x25 cm'},
   ]},
   200: { label:'🟢 Especificações do Pneu', fields:[
-    {id:'medida', label:'Medida',  ph:'Ex: 205/55 R16'},
-    {id:'tipo',   label:'Tipo',   ph:'Ex: Street, Off-Road'},
+    {id:'medida',    label:'Medida',         ph:'Ex: 205/55 R16'},
+    {id:'tipo',      label:'Tipo',           ph:'Ex: Street, Off-Road'},
+    {id:'med_emb',   label:'Medida Embalagem', ph:'Ex: 70x25x25 cm'},
   ]},
   300: { label:'⚙️ Parafuso', fields:[
-    {id:'medida_mm', label:'Medida (mm)', ph:'Ex: M12x1.5'},
+    {id:'medida_mm', label:'Medida (mm)',    ph:'Ex: M12x1.5'},
+    {id:'med_emb',   label:'Medida Embalagem', ph:'Ex: 20x10x5 cm'},
   ]},
   400: { label:'⚙️ Porca', fields:[
-    {id:'medida_mm', label:'Medida (mm)', ph:'Ex: M12x1.5'},
+    {id:'medida_mm', label:'Medida (mm)',    ph:'Ex: M12x1.5'},
+    {id:'med_emb',   label:'Medida Embalagem', ph:'Ex: 20x10x5 cm'},
   ]},
   500: { label:'🔴 Válvula', fields:[
-    {id:'cor', label:'Cor', ph:'Ex: Vermelho, Azul'},
+    {id:'cor',       label:'Cor',            ph:'Ex: Vermelho, Azul'},
+    {id:'med_emb',   label:'Medida Embalagem', ph:'Ex: 10x5x5 cm'},
   ]},
   600: { label:'⭕ Anel Centralizador', fields:[
-    {id:'diam_int', label:'Ø Interno (mm)', ph:'Ex: 56.1'},
-    {id:'diam_ext', label:'Ø Externo (mm)', ph:'Ex: 67.1'},
+    {id:'diam_int',  label:'Ø Interno (mm)', ph:'Ex: 56.1'},
+    {id:'diam_ext',  label:'Ø Externo (mm)', ph:'Ex: 67.1'},
+    {id:'med_emb',   label:'Medida Embalagem', ph:'Ex: 15x15x5 cm'},
   ]},
-  1000: { label:'📏 Espaçador', fields:[
-    {id:'medida_mm', label:'Espessura (mm)', ph:'Ex: 20mm'},
+  700: { label:'🔵 Especificações do Volante', fields:[
+    {id:'cor',       label:'Cor',            ph:'Ex: Preto, Vermelho'},
+    {id:'revestimento', label:'Revestimento', ph:'Ex: Couro, Alcântara'},
+    {id:'buzina',    label:'Buzina',         ph:'Ex: Sim, Não'},
+    {id:'med_emb',   label:'Medida Embalagem', ph:'Ex: 40x40x20 cm'},
+  ]},
+  1000: { label:'📏 Especificações do Espaçador', fields:[
+    {id:'med_int',   label:'Medida Interna (mm)', ph:'Ex: 56.1'},
+    {id:'med_ext',   label:'Medida Externa (mm)', ph:'Ex: 110.0'},
+    {id:'furacao',   label:'Furação',        ph:'Ex: 5x114'},
+    {id:'material',  label:'Material',       ph:'Ex: Alumínio, Aço'},
+    {id:'med_emb',   label:'Medida Embalagem', ph:'Ex: 25x25x10 cm'},
+  ]},
+  1100: { label:'📦 Consignado', fields:[
+    {id:'cliente',   label:'Cliente (Dono)', ph:'Ex: João Silva'},
+    {id:'vende_sp',  label:'Vende s/Pneu',  ph:'Ex: Sim, Não'},
+    {id:'obs_cons',  label:'Obs.',           ph:'Ex: Retirar até 01/04'},
+    {id:'med_emb',   label:'Medida Embalagem', ph:'Ex: 60x60x25 cm'},
   ]},
 };
-const ALL_EXTRA_IDS=['aro','tala','offset','furacao','cor','medida','tipo','medida_mm','diam_int','diam_ext'];
+// Campos extras para categorias sem config específica (campo medida embalagem universal)
+const EXTRA_DEFAULT_FIELDS = [{id:'med_emb', label:'Medida Embalagem', ph:'Ex: 30x20x15 cm'}];
+const ALL_EXTRA_IDS=['aro','tala','offset','furacao','cor','medida','tipo','medida_mm','diam_int','diam_ext','cubagem','peso','med_emb','revestimento','buzina','med_int','med_ext','material','cliente','vende_sp','obs_cons'];
 
 // ─── STATE ───────────────────────────────────────────────────
 let state={produtos:[],categorias:[],movimentacoes:[]};
@@ -397,7 +423,7 @@ function saveState(){localStorage.setItem('erp_v4',JSON.stringify(state));window
 // ─── HELPERS ─────────────────────────────────────────────────
 function getCat(id){return state.categorias.find(c=>c.id===id)||{nome:'?',cor:'#7a8fa6'};}
 function getProd(cod){return state.produtos.find(p=>p.codigo===parseInt(cod));}
-function fmtData(iso){return new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});}
+function fmtData(iso){return new Date(iso).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'});}
 function fmtMes(iso){const[y,m]=iso.split('-');return new Date(y,m-1).toLocaleString('pt-BR',{month:'long',year:'numeric'});}
 function daysSince(iso){return Math.floor((new Date()-new Date(iso))/86400000);}
 function fmtBRL(v){return(v!=null&&v!=='')?'R$ '+parseFloat(v).toFixed(2).replace('.',','):'—';}
@@ -472,7 +498,9 @@ function limparForm(){
 // ─── ESTOQUE ─────────────────────────────────────────────────
 function getEstoqueCols(catId){
   const base=[{k:'codigo',l:'Código'},{k:'nome',l:'Produto'},{k:'cat',l:'Categoria'},{k:'estoque',l:'Estoque'},{k:'minimo',l:'Mín.'}];
-  const ext=(EXTRA_CONFIG[catId]?.fields||[]).map(f=>({k:'x:'+f.id,l:f.label}));
+  // Usar campos do EXTRA_CONFIG se existir, senão usar campo padrão med_emb
+  const cfgFields = EXTRA_CONFIG[catId]?.fields || EXTRA_DEFAULT_FIELDS;
+  const ext=cfgFields.map(f=>({k:'x:'+f.id,l:f.label}));
   const end=[{k:'custo',l:'Custo'},{k:'venda',l:'Venda'},{k:'ultima',l:'Últ. Mov.'},{k:'status',l:'Status'}];
   return[...base,...ext,...end];
 }
@@ -489,7 +517,7 @@ function renderEstoque(){
       (!filtCat||p.catId===parseInt(filtCat))&&(!filtStatus||getStatus(p)===filtStatus);
   }).sort((a,b)=>a.codigo-b.codigo);
   const catId=filtCat?parseInt(filtCat):null;
-  const cols=catId?getEstoqueCols(catId):[{k:'codigo',l:'Código'},{k:'nome',l:'Produto'},{k:'cat',l:'Categoria'},{k:'estoque',l:'Estoque'},{k:'minimo',l:'Mín.'},{k:'custo',l:'Custo'},{k:'venda',l:'Venda'},{k:'ultima',l:'Últ. Mov.'},{k:'status',l:'Status'}];
+  const cols=catId?getEstoqueCols(catId):[{k:'codigo',l:'Código'},{k:'nome',l:'Produto'},{k:'cat',l:'Categoria'},{k:'estoque',l:'Estoque'},{k:'minimo',l:'Mín.'},{k:'x:med_emb',l:'Med. Embalagem'},{k:'custo',l:'Custo'},{k:'venda',l:'Venda'},{k:'ultima',l:'Últ. Mov.'},{k:'status',l:'Status'}];
   document.getElementById('estoque-thead').innerHTML=cols.map(c=>`<th>${c.l}</th>`).join('');
   const tb=document.getElementById('tbody-estoque');
   if(!prods.length){tb.innerHTML=`<tr><td colspan="${cols.length}" style="text-align:center;color:var(--text3);padding:30px">Nenhum produto encontrado</td></tr>`;return;}
@@ -1064,7 +1092,7 @@ function renderCadastro(){
 
   const prodHtml = state.produtos.sort((a,b)=>a.codigo-b.codigo).map(p=>{
     const cat=getCat(p.catId),ex=p.extras||{};
-    const exHtml=(EXTRA_CONFIG[p.catId]?.fields||[]).map(f=>ex[f.id]?`<span>🔹 ${f.label}: <b style="color:var(--text)">${ex[f.id]}</b></span>`:'').filter(Boolean).join('');
+    const exHtml=(EXTRA_CONFIG[p.catId]?.fields||EXTRA_DEFAULT_FIELDS).map(f=>ex[f.id]?`<span>🔹 ${f.label}: <b style="color:var(--text)">${ex[f.id]}</b></span>`:'').filter(Boolean).join('');
     return`<div class="prod-card"><div class="prod-card-header"><div><div class="prod-name">${p.nome}</div><div class="prod-code">${p.codigo}</div></div>${statusBadge(p)}</div>
     <div class="prod-info">
       <span>📁 <span style="color:${cat.cor}">${cat.nome}</span></span>
@@ -1085,9 +1113,10 @@ function renderCadastro(){
 
 function toggleExtraFields(){
   const catId=parseInt(document.getElementById('prod-cat').value),cfg=EXTRA_CONFIG[catId],cont=document.getElementById('extra-fields');
-  if(!cfg){cont.innerHTML='';return;}
-  const grid=cfg.fields.length>3?'grid-template-columns:1fr 1fr 1fr':'grid-template-columns:1fr 1fr';
-  cont.innerHTML=`<div class="sec-label">${cfg.label}</div><div class="extra-section"><div style="display:grid;${grid};gap:12px">${cfg.fields.map(f=>`<div class="form-group"><label>${f.label}</label><input type="text" id="extra-${f.id}" placeholder="${f.ph}"></div>`).join('')}</div></div>`;
+  const fields=cfg?cfg.fields:EXTRA_DEFAULT_FIELDS;
+  const label=cfg?cfg.label:'📦 Embalagem';
+  const grid=fields.length>3?'grid-template-columns:1fr 1fr 1fr':'grid-template-columns:1fr 1fr';
+  cont.innerHTML=`<div class="sec-label">${label}</div><div class="extra-section"><div style="display:grid;${grid};gap:12px">${fields.map(f=>`<div class="form-group"><label>${f.label}</label><input type="text" id="extra-${f.id}" placeholder="${f.ph}"></div>`).join('')}</div></div>`;
 }
 
 function abrirModalProduto(edit=null){
@@ -1109,7 +1138,8 @@ function abrirModalProduto(edit=null){
     document.getElementById('prod-cod').disabled=true;
     toggleExtraFields();
     const cfg=EXTRA_CONFIG[p.catId];
-    if(cfg&&p.extras)cfg.fields.forEach(f=>{const el=document.getElementById('extra-'+f.id);if(el)el.value=p.extras[f.id]||'';});
+    const fields=cfg?cfg.fields:EXTRA_DEFAULT_FIELDS;
+    if(p.extras)fields.forEach(f=>{const el=document.getElementById('extra-'+f.id);if(el)el.value=p.extras[f.id]||'';});
   }else{
     ['prod-cod','prod-nome','prod-unidade','prod-custo','prod-venda'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('prod-estoque').value='0';
@@ -1134,7 +1164,7 @@ function salvarProduto(){
     ref=document.getElementById('prod-ref')?.value.trim()||'';
   if(!cod||!nome){toast('Preencha código e nome.','error');return;}
   const extras={};
-  (EXTRA_CONFIG[catId]?.fields||[]).forEach(f=>{const el=document.getElementById('extra-'+f.id);if(el&&el.value.trim())extras[f.id]=el.value.trim();});
+  (EXTRA_CONFIG[catId]?.fields||EXTRA_DEFAULT_FIELDS).forEach(f=>{const el=document.getElementById('extra-'+f.id);if(el&&el.value.trim())extras[f.id]=el.value.trim();});
   const obj={codigo:cod,nome,catId,estoque,minimo,unidade,custo:custo!==''?parseFloat(custo):null,venda:venda!==''?parseFloat(venda):null,extras,ref};
   if(editandoProd){
     const idx=state.produtos.findIndex(p=>p.codigo===editandoProd);
