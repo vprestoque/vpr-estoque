@@ -430,9 +430,13 @@ const EXTRA_CONFIG = {
     {id:'obs_cons',  label:'Obs.',            ph:'Ex: Retirar até 01/04'},
     {id:'med_emb',   label:'Medida Embalagem',ph:'Ex: 60x60x25 cm'},
   ]},
+  1200: { label:'📝 Seminovo', fields:[
+    {id:'obs_semi',  label:'Observação',       ph:'Ex: Roda amassada, pintura desgastada...'},
+    {id:'med_emb',   label:'Medida Embalagem',ph:'Ex: 60x60x25 cm'},
+  ]},
 };
 const EXTRA_DEFAULT_FIELDS=[{id:'med_emb',label:'Medida Embalagem',ph:'Ex: 30x20x15 cm'}];
-const ALL_EXTRA_IDS=['aro','tala','offset','furacao','cor','medida','tipo','medida_mm','diam_int','diam_ext','cubagem','peso','med_emb','revestimento','buzina','med_int','med_ext','material','cliente','vende_sp','obs_cons'];
+const ALL_EXTRA_IDS=['aro','tala','offset','furacao','cor','medida','tipo','medida_mm','diam_int','diam_ext','cubagem','peso','med_emb','revestimento','buzina','med_int','med_ext','material','cliente','vende_sp','obs_cons','obs_semi'];
 
 // ─── STATE ───────────────────────────────────────────────────
 let state={produtos:[],categorias:[],movimentacoes:[],editandoProd:null};
