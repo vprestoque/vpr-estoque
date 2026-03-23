@@ -202,6 +202,7 @@
                 <option value="Débito">Débito</option>
                 <option value="Parcelado">Parcelado</option>
                 <option value="Dinheiro">Dinheiro</option>
+                <option value="Brinde">Brinde</option>
               </select>
             </div>
             <div class="form-group" id="grupo-parcelas" style="display:none"><label>Parcelas</label>
@@ -553,6 +554,16 @@ function toggleParcelas(selId,grpId){
   const v=document.getElementById(selId)?.value;
   const g=document.getElementById(grpId);
   if(g) g.style.display=v==='Parcelado'?'block':'none';
+  // Brinde: forçar valor 0 e desabilitar campo
+  const valorMap={'mov-pagamento':'mov-valor-neg','cres-pagamento':'cres-valor'};
+  const valorId=valorMap[selId];
+  if(valorId){
+    const vEl=document.getElementById(valorId);
+    if(vEl){
+      if(v==='Brinde'){vEl.value='0';vEl.disabled=true;vEl.placeholder='Brinde — valor R$ 0,00';}
+      else{vEl.disabled=false;vEl.placeholder='Vazio = preço padrão';if(vEl.value==='0')vEl.value='';}
+    }
+  }
 }
 function autoFillProduct(cod){const p=getProd(cod);if(p){const c=getCat(p.catId);document.getElementById('mov-nome').value=p.nome;document.getElementById('mov-categoria').value=c.nome;document.getElementById('mov-estoque-atual').value=p.estoque+' '+(p.unidade||'un');}else{['mov-nome','mov-categoria','mov-estoque-atual'].forEach(id=>document.getElementById(id).value='');}}
 function registrarMovimentacao(){
@@ -564,9 +575,13 @@ function registrarMovimentacao(){
   if(tipoSel==='saida'&&qtd>dispQtd){showFb('Estoque insuficiente! Disponível: '+dispQtd,'error');return;}
   let valorNeg=null,pagamento='',parcelas='';
   if(tipoSel==='saida'){
-    const vn=document.getElementById('mov-valor-neg')?.value;
-    valorNeg=vn&&parseFloat(vn)>0?parseFloat(vn):null;
     pagamento=document.getElementById('mov-pagamento')?.value||'';
+    if(pagamento==='Brinde'){
+      valorNeg=0;
+    } else {
+      const vn=document.getElementById('mov-valor-neg')?.value;
+      valorNeg=vn&&parseFloat(vn)>0?parseFloat(vn):null;
+    }
     if(pagamento==='Parcelado') parcelas=document.getElementById('mov-parcelas')?.value||'';
   }
   if(tipoSel==='entrada')p.estoque+=qtd;else p.estoque-=qtd;
@@ -587,6 +602,7 @@ function limparForm(){
   const box=document.getElementById('mov-autocomplete');if(box)box.style.display='none';
   const pag=document.getElementById('mov-pagamento');if(pag)pag.value='';
   const gp=document.getElementById('grupo-parcelas');if(gp)gp.style.display='none';
+  const vn=document.getElementById('mov-valor-neg');if(vn){vn.disabled=false;vn.placeholder='Vazio = preço padrão';}
   setTipo('entrada');
   document.getElementById('mov-data').value=new Date().toISOString().slice(0,10);
 }
@@ -663,9 +679,9 @@ function concluirReserva(){
   const p=getProd(r.codigo);
   if(!p){toast('Produto não encontrado.','error');return;}
   if(r.qtd>p.estoque){toast('Estoque insuficiente! Disponível: '+p.estoque,'error');return;}
-  const vn=document.getElementById('cres-valor').value;
-  const valorNeg=vn&&parseFloat(vn)>0?parseFloat(vn):null;
   const pagamento=document.getElementById('cres-pagamento').value||'';
+  const vn=document.getElementById('cres-valor').value;
+  const valorNeg=pagamento==='Brinde'?0:(vn&&parseFloat(vn)>0?parseFloat(vn):null);
   const parcelas=pagamento==='Parcelado'?document.getElementById('cres-parcelas').value:'';
   const obs=document.getElementById('cres-obs').value||'Reserva cliente: '+r.cliente;
   p.estoque-=r.qtd;
@@ -798,7 +814,7 @@ function renderHistorico(){
   if(mes)movs=movs.filter(m=>m.data.startsWith(mes));
   document.getElementById('tbody-historico').innerHTML=movs.map(m=>{
     const pagLabel=m.pagamento?(m.parcelas?m.pagamento+' '+m.parcelas+'x':m.pagamento):'—';
-    const valorLabel=m.tipo==='saida'?(m.valorNeg!=null?'<span style="color:var(--warn);font-family:var(--mono);font-size:0.8rem">'+fmtBRL(m.valorNeg)+'</span>':'<span style="color:var(--text3);font-size:0.75rem">padrão</span>'):'—';
+    const valorLabel=m.tipo==='saida'?(m.pagamento==='Brinde'?'<span style="color:var(--text2);font-family:var(--mono);font-size:0.8rem">R$ 0,00</span>':m.valorNeg!=null?'<span style="color:var(--warn);font-family:var(--mono);font-size:0.8rem">'+fmtBRL(m.valorNeg)+'</span>':'<span style="color:var(--text3);font-size:0.75rem">padrão</span>'):'—';
     return '<tr>'
       +'<td style="font-size:0.78rem;color:var(--text2)">'+fmtData(m.data)+'</td>'
       +'<td><span class="code-badge">'+m.codigo+'</span></td>'
@@ -852,7 +868,7 @@ function renderRelatorio(){
   // ── KPIs ──
   const ent=movs.filter(m=>m.tipo==='entrada').reduce((s,m)=>s+m.qtd,0);
   const sai=movs.filter(m=>m.tipo==='saida').reduce((s,m)=>s+m.qtd,0);
-  const rec=movs.filter(m=>m.tipo==='saida').reduce((s,m)=>{const p=getProd(m.codigo);return s+(m.valorNeg!=null?m.valorNeg:(p?.venda?parseFloat(p.venda)*m.qtd:0));},0);
+  const rec=movs.filter(m=>m.tipo==='saida').reduce((s,m)=>{const p=getProd(m.codigo);return s+(m.pagamento==='Brinde'?0:m.valorNeg!=null?m.valorNeg:(p?.venda?parseFloat(p.venda)*m.qtd:0));},0);
   const cst=movs.filter(m=>m.tipo==='saida').reduce((s,m)=>{const p=getProd(m.codigo);return s+(p?.custo?parseFloat(p.custo)*m.qtd:0);},0);
   const margem=rec-cst;
   document.getElementById('rel-kpis').innerHTML=`
@@ -934,7 +950,7 @@ function renderComparativo(sel) {
   function calcStats(movs) {
     const ent=movs.filter(m=>m.tipo==='entrada').reduce((s,m)=>s+m.qtd,0);
     const sai=movs.filter(m=>m.tipo==='saida').reduce((s,m)=>s+m.qtd,0);
-    const rec=movs.filter(m=>m.tipo==='saida').reduce((s,m)=>{const p=getProd(m.codigo);return s+(m.valorNeg!=null?m.valorNeg:(p?.venda?parseFloat(p.venda)*m.qtd:0));},0);
+    const rec=movs.filter(m=>m.tipo==='saida').reduce((s,m)=>{const p=getProd(m.codigo);return s+(m.pagamento==='Brinde'?0:m.valorNeg!=null?m.valorNeg:(p?.venda?parseFloat(p.venda)*m.qtd:0));},0);
     const cst=movs.filter(m=>m.tipo==='saida').reduce((s,m)=>{const p=getProd(m.codigo);return s+(p?.custo?parseFloat(p.custo)*m.qtd:0);},0);
     return {total:movs.length, ent, sai, rec, cst, margem:rec-cst};
   }
@@ -1029,7 +1045,7 @@ function exportarRelPrint(){
   const ml=fmtMes(sel+'-01');
   const ent=relAtual.filter(m=>m.tipo==='entrada').reduce((s,m)=>s+m.qtd,0);
   const sai=relAtual.filter(m=>m.tipo==='saida').reduce((s,m)=>s+m.qtd,0);
-  const rec=relAtual.filter(m=>m.tipo==='saida').reduce((s,m)=>{const p=getProd(m.codigo);return s+(m.valorNeg!=null?m.valorNeg:(p&&p.venda?parseFloat(p.venda)*m.qtd:0));},0);
+  const rec=relAtual.filter(m=>m.tipo==='saida').reduce((s,m)=>{const p=getProd(m.codigo);return s+(m.pagamento==='Brinde'?0:m.valorNeg!=null?m.valorNeg:(p&&p.venda?parseFloat(p.venda)*m.qtd:0));},0);
   const cst=relAtual.filter(m=>m.tipo==='saida').reduce((s,m)=>{const p=getProd(m.codigo);return s+(p&&p.custo?parseFloat(p.custo)*m.qtd:0);},0);
   const margem=rec-cst;const pct=rec>0?((margem/rec)*100).toFixed(1):0;
   const parts=sel.split('-').map(Number);
@@ -1038,7 +1054,7 @@ function exportarRelPrint(){
   const prevMovs=state.movimentacoes.filter(mv=>getLocalMonth(mv.data)===prevSel);
   const pe=prevMovs.filter(m=>m.tipo==='entrada').reduce((s,m)=>s+m.qtd,0);
   const ps=prevMovs.filter(m=>m.tipo==='saida').reduce((s,m)=>s+m.qtd,0);
-  const pr=prevMovs.filter(m=>m.tipo==='saida').reduce((s,m)=>{const p=getProd(m.codigo);return s+(m.valorNeg!=null?m.valorNeg:(p&&p.venda?parseFloat(p.venda)*m.qtd:0));},0);
+  const pr=prevMovs.filter(m=>m.tipo==='saida').reduce((s,m)=>{const p=getProd(m.codigo);return s+(m.pagamento==='Brinde'?0:m.valorNeg!=null?m.valorNeg:(p&&p.venda?parseFloat(p.venda)*m.qtd:0));},0);
   const pc=prevMovs.filter(m=>m.tipo==='saida').reduce((s,m)=>{const p=getProd(m.codigo);return s+(p&&p.custo?parseFloat(p.custo)*m.qtd:0);},0);
   const pm=pr-pc;const prevLabel=fmtMes(prevSel+'-01');
   function vp(cur,prev){if(prev===0&&cur===0)return'\u2014';if(prev===0)return'+100%';const p=((cur-prev)/prev*100).toFixed(1);return(parseFloat(p)>=0?'+':'')+p+'%';}
@@ -1157,7 +1173,7 @@ function exportarRelAnual(){
     const movs=state.movimentacoes.filter(function(mv){return getLocalMonth(mv.data)===sel;});
     const ent=movs.filter(function(m){return m.tipo==='entrada';}).reduce(function(s,m){return s+m.qtd;},0);
     const sai=movs.filter(function(m){return m.tipo==='saida';}).reduce(function(s,m){return s+m.qtd;},0);
-    const rec=movs.filter(function(m){return m.tipo==='saida';}).reduce(function(s,m){const p=getProd(m.codigo);return s+(m.valorNeg!=null?m.valorNeg:(p&&p.venda?parseFloat(p.venda)*m.qtd:0));},0);
+    const rec=movs.filter(function(m){return m.tipo==='saida';}).reduce(function(s,m){const p=getProd(m.codigo);return s+(m.pagamento==='Brinde'?0:m.valorNeg!=null?m.valorNeg:(p&&p.venda?parseFloat(p.venda)*m.qtd:0));},0);
     const cst=movs.filter(function(m){return m.tipo==='saida';}).reduce(function(s,m){const p=getProd(m.codigo);return s+(p&&p.custo?parseFloat(p.custo)*m.qtd:0);},0);
     return{label:mesesNomes[i],sel:sel,total:movs.length,ent:ent,sai:sai,rec:rec,cst:cst,margem:rec-cst};
   });
@@ -1726,6 +1742,7 @@ window._state = state;
               <option value="Débito">Débito</option>
               <option value="Parcelado">Parcelado</option>
               <option value="Dinheiro">Dinheiro</option>
+              <option value="Brinde">Brinde</option>
             </select>
           </div>
           <div class="form-group" id="cres-grupo-parcelas" style="display:none"><label>Parcelas</label>
