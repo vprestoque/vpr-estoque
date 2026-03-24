@@ -1812,12 +1812,13 @@ const auth = getAuth(app);
 const REF = doc(db,"erp","state");
 
 // ── Firestore ──
-async function fbSave(d) {
+async async function fbSave(d) {
   try {
     await setDoc(REF,{
       produtos:JSON.stringify(d.produtos),
       categorias:JSON.stringify(d.categorias),
       movimentacoes:JSON.stringify(d.movimentacoes),
+      reservas:JSON.stringify(d.reservas||[]),
       ts:new Date().toISOString()
     });
   } catch(e){console.error("fbSave:",e);}
@@ -2042,6 +2043,8 @@ onAuthStateChanged(auth, async (user) => {
         window._state.produtos=saved.produtos;
         window._state.categorias=saved.categorias;
         window._state.movimentacoes=saved.movimentacoes;
+        window._state.reservas=saved.reservas||[];
+        state.reservas=saved.reservas||[];
       } else {
         await fbSave(window._state);
       }
