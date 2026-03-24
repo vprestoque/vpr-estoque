@@ -1533,10 +1533,13 @@ function editarCategoria(id) {
   if (!cat) return;
   state.editandoCat = id;
   abrirModalCategoria(id);
-  document.getElementById('cat-cod').value = cat.id;
-  document.getElementById('cat-cod').disabled = true;
-  document.getElementById('cat-nome').value = cat.nome;
-  document.getElementById('cat-cor').value = cat.cor;
+  // Re-apply values after modal renders to ensure they are correct
+  const codEl = document.getElementById('cat-cod');
+  if(codEl){ codEl.value = cat.id; codEl.disabled = true; }
+  const nomeEl = document.getElementById('cat-nome');
+  if(nomeEl) nomeEl.value = cat.nome;
+  const corEl = document.getElementById('cat-cor');
+  if(corEl) corEl.value = cat.cor;
 }
 function excluirCategoria(id) {
   const count = state.produtos.filter(p=>p.catId===id).length;
@@ -1614,6 +1617,7 @@ function limparDadosTeste() {
   if (!confirm('Segunda confirmação: Apagar TUDO mesmo?')) return;
   state.produtos = [];
   state.movimentacoes = [];
+  state.reservas = [];
   state.categorias = [
     {id:100, nome:'Rodas',                cor:'#00d4ff'},
     {id:200, nome:'Pneus',                cor:'#00ff88'},
@@ -1812,7 +1816,7 @@ const auth = getAuth(app);
 const REF = doc(db,"erp","state");
 
 // ── Firestore ──
-async async function fbSave(d) {
+async function fbSave(d) {
   try {
     await setDoc(REF,{
       produtos:JSON.stringify(d.produtos),
