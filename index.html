@@ -132,6 +132,38 @@
     .kpi-grid,.report-grid{grid-template-columns:1fr 1fr;}
     .dash-grid,.alerts-grid,.form-grid{grid-template-columns:1fr;}
   }
+
+  /* ── VENDA MÚLTIPLA ─────────────────────────────────────────── */
+  .mov-mode-tabs{display:flex;gap:8px;margin-bottom:20px;}
+  .mov-mode-btn{flex:1;padding:11px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;font-family:var(--sans);font-size:0.88rem;font-weight:600;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+  .mov-mode-btn.active-single{background:rgba(0,212,255,0.1);border-color:var(--accent);color:var(--accent);}
+  .mov-mode-btn.active-multi{background:rgba(0,255,136,0.1);border-color:var(--accent2);color:var(--accent2);}
+  .mov-mode-btn:hover:not(.active-single):not(.active-multi){color:var(--text);border-color:rgba(255,255,255,0.15);}
+  .cart-section{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;max-width:1100px;}
+  .cart-add-row{display:grid;grid-template-columns:160px 1fr 120px auto;gap:10px;align-items:end;padding:16px;background:var(--surface2);border-radius:10px;margin-bottom:18px;border:1px solid var(--border);}
+  .cart-add-row .form-group{margin:0;}
+  .cart-items-header{display:grid;grid-template-columns:80px 1fr 90px 100px 110px 100px 50px;gap:8px;padding:8px 12px;border-radius:7px;background:rgba(255,255,255,0.03);margin-bottom:6px;font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;color:var(--text3);}
+  .cart-item{display:grid;grid-template-columns:80px 1fr 90px 100px 110px 100px 50px;gap:8px;align-items:center;padding:10px 12px;background:var(--surface2);border-radius:8px;margin-bottom:5px;border:1px solid rgba(255,255,255,0.04);animation:cartIn .2s ease;}
+  @keyframes cartIn{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
+  .cart-item:hover{border-color:rgba(0,255,136,0.15);}
+  .cart-item .item-name{font-size:0.84rem;font-weight:500;}
+  .cart-item .item-code{font-family:var(--mono);font-size:0.74rem;color:var(--accent);}
+  .cart-item .item-qty{font-family:var(--mono);font-weight:600;color:var(--accent2);}
+  .cart-item .item-stock{font-family:var(--mono);font-size:0.78rem;color:var(--text3);}
+  .cart-item .item-price{font-family:var(--mono);font-size:0.78rem;color:var(--warn);}
+  .cart-item .item-subtotal{font-family:var(--mono);font-size:0.8rem;font-weight:600;color:var(--accent2);}
+  .cart-empty{text-align:center;padding:30px;color:var(--text3);font-size:0.85rem;border:1px dashed var(--border);border-radius:10px;margin-bottom:14px;}
+  .cart-summary{background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.15);border-radius:10px;padding:16px;margin-top:14px;}
+  .cart-summary-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:0.84rem;}
+  .cart-summary-row.total{border-top:1px solid rgba(0,255,136,0.2);margin-top:8px;padding-top:12px;font-size:1rem;font-weight:700;color:var(--accent2);}
+  .cart-summary-row .val{font-family:var(--mono);}
+  .qty-input{width:70px;text-align:center;padding:7px 8px;font-size:0.85rem;}
+  .btn-remove-item{background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.25);color:var(--danger);border-radius:6px;cursor:pointer;padding:5px 8px;font-size:0.8rem;transition:all .2s;}
+  .btn-remove-item:hover{background:rgba(255,71,87,0.25);}
+  .btn-add-cart{background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.3);color:var(--accent2);padding:10px 18px;border-radius:9px;font-family:var(--sans);font-size:0.85rem;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap;}
+  .btn-add-cart:hover{background:rgba(0,255,136,0.2);}
+  .cart-payment-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:14px;}
+  .cart-badge-count{background:var(--accent2);color:#000;font-size:0.65rem;padding:2px 6px;border-radius:10px;font-weight:700;}
 </style>
 </head>
 <body>
@@ -167,56 +199,167 @@
 
   <!-- MOVIMENTAÇÃO -->
   <div id="page-movimentacao" class="page">
-    <div class="form-card">
-      <h2 style="font-size:1rem;font-weight:600;margin-bottom:20px;color:var(--accent)">↕ Registrar Movimentação</h2>
-      <div class="form-grid">
-        <div class="form-group"><label>Código do Produto</label><input type="text" id="mov-codigo" placeholder="Ex: 101" oninput="autoFillProduct(this.value)" autocomplete="off"></div>
-        <div class="form-group" style="position:relative"><label>Buscar por Nome</label>
-          <input type="text" id="mov-busca-nome" placeholder="Digite o nome do produto..." oninput="buscaPorNome(this.value)" autocomplete="off">
-          <div id="mov-autocomplete" style="display:none;position:absolute;top:100%;left:0;right:0;background:#1a2235;border:1px solid #1e2d45;border-radius:0 0 8px 8px;z-index:100;max-height:200px;overflow-y:auto;"></div>
-        </div>
-        <div class="form-group"><label>Produto</label><input type="text" id="mov-nome" readonly placeholder="Auto preenchido"></div>
-        <div class="form-group"><label>Categoria</label><input type="text" id="mov-categoria" readonly placeholder="Auto preenchido"></div>
-        <div class="form-group"><label>Estoque Atual</label><input type="text" id="mov-estoque-atual" readonly placeholder="Auto preenchido"></div>
-        <div class="form-group full"><label>Tipo</label>
-          <div class="tipo-btns">
-            <button class="tipo-btn active-entrada" id="btn-entrada" onclick="setTipo('entrada')">▲ ENTRADA</button>
-            <button class="tipo-btn" id="btn-saida" onclick="setTipo('saida')">▼ SAÍDA</button>
-          </div>
-        </div>
-        <div class="form-group"><label>Quantidade</label><input type="number" id="mov-qtd" placeholder="0" min="1"></div>
-        <div class="form-group"><label>Data</label><input type="date" id="mov-data"></div>
-        <div class="form-group full"><label>Observação</label><input type="text" id="mov-obs" placeholder="NF, motivo..."></div>
-        <div id="campos-saida" style="display:none;grid-column:1/-1">
-          <div style="border-top:1px solid var(--border);margin:4px 0 14px;"></div>
-          <div style="font-size:0.75rem;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">💰 Detalhes da Venda</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
-            <div class="form-group"><label>Valor Negociado (R$) <span style="color:var(--text3);font-weight:400">opcional</span></label><input type="number" id="mov-valor-neg" placeholder="Vazio = preço padrão" step="0.01" min="0"></div>
-            <div class="form-group"><label>Forma de Pagamento</label>
-              <select id="mov-pagamento" onchange="toggleParcelas('mov-pagamento','grupo-parcelas')">
-                <option value="">Selecione...</option>
-                <option value="Pix">Pix</option>
-                <option value="Mercado Livre">Mercado Livre</option>
-                <option value="Site - VPR">Site - VPR</option>
-                <option value="Crédito">Crédito</option>
-                <option value="Débito">Débito</option>
-                <option value="Parcelado">Parcelado</option>
-                <option value="Dinheiro">Dinheiro</option>
-                <option value="Brinde">Brinde</option>
-              </select>
-            </div>
-            <div class="form-group" id="grupo-parcelas" style="display:none"><label>Parcelas</label>
-              <select id="mov-parcelas"><option value="2">2x</option><option value="3">3x</option><option value="4">4x</option><option value="5">5x</option><option value="6">6x</option><option value="8">8x</option><option value="10">10x</option><option value="12">12x</option></select>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div style="margin-top:20px;display:flex;gap:10px">
-        <button class="btn-primary" onclick="registrarMovimentacao()">✓ Registrar</button>
-        <button class="btn-sec" onclick="limparForm()">✕ Limpar</button>
-      </div>
-      <div class="feedback" id="mov-feedback"></div>
+
+    <!-- MODE SELECTOR -->
+    <div class="mov-mode-tabs">
+      <button class="mov-mode-btn active-single" id="btn-mode-single" onclick="setMovMode('single')">
+        ↕ Movimentação Simples
+        <span style="font-size:0.72rem;font-weight:400;opacity:0.7">Uma entrada ou saída por vez</span>
+      </button>
+      <button class="mov-mode-btn" id="btn-mode-multi" onclick="setMovMode('multi')">
+        🛒 Venda Múltipla
+        <span style="font-size:0.72rem;font-weight:400;opacity:0.7">Vários itens para o mesmo cliente</span>
+        <span class="cart-badge-count" id="cart-badge" style="display:none">0</span>
+      </button>
     </div>
+
+    <!-- SINGLE MODE -->
+    <div id="mov-single-panel">
+      <div class="form-card">
+        <div class="form-grid">
+          <div class="form-group"><label>Código do Produto</label><input type="text" id="mov-codigo" placeholder="Ex: 101" oninput="autoFillProduct(this.value)" autocomplete="off"></div>
+          <div class="form-group" style="position:relative"><label>Buscar por Nome</label>
+            <input type="text" id="mov-busca-nome" placeholder="Digite o nome do produto..." oninput="buscaPorNome(this.value)" autocomplete="off">
+            <div id="mov-autocomplete" style="display:none;position:absolute;top:100%;left:0;right:0;background:#1a2235;border:1px solid #1e2d45;border-radius:0 0 8px 8px;z-index:100;max-height:200px;overflow-y:auto;"></div>
+          </div>
+          <div class="form-group"><label>Produto</label><input type="text" id="mov-nome" readonly placeholder="Auto preenchido"></div>
+          <div class="form-group"><label>Categoria</label><input type="text" id="mov-categoria" readonly placeholder="Auto preenchido"></div>
+          <div class="form-group"><label>Estoque Atual</label><input type="text" id="mov-estoque-atual" readonly placeholder="Auto preenchido"></div>
+          <div class="form-group full"><label>Tipo</label>
+            <div class="tipo-btns">
+              <button class="tipo-btn active-entrada" id="btn-entrada" onclick="setTipo('entrada')">▲ ENTRADA</button>
+              <button class="tipo-btn" id="btn-saida" onclick="setTipo('saida')">▼ SAÍDA</button>
+            </div>
+          </div>
+          <div class="form-group"><label>Quantidade</label><input type="number" id="mov-qtd" placeholder="0" min="1"></div>
+          <div class="form-group"><label>Data</label><input type="date" id="mov-data"></div>
+          <div class="form-group full"><label>Observação</label><input type="text" id="mov-obs" placeholder="NF, motivo..."></div>
+          <div id="campos-saida" style="display:none;grid-column:1/-1">
+            <div style="border-top:1px solid var(--border);margin:4px 0 14px;"></div>
+            <div style="font-size:0.75rem;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">💰 Detalhes da Venda</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+              <div class="form-group"><label>Valor Negociado (R$) <span style="color:var(--text3);font-weight:400">opcional</span></label><input type="number" id="mov-valor-neg" placeholder="Vazio = preço padrão" step="0.01" min="0"></div>
+              <div class="form-group"><label>Forma de Pagamento</label>
+                <select id="mov-pagamento" onchange="toggleParcelas('mov-pagamento','grupo-parcelas')">
+                  <option value="">Selecione...</option>
+                  <option value="Pix">Pix</option>
+                  <option value="Mercado Livre">Mercado Livre</option>
+                  <option value="Site - VPR">Site - VPR</option>
+                  <option value="Crédito">Crédito</option>
+                  <option value="Débito">Débito</option>
+                  <option value="Parcelado">Parcelado</option>
+                  <option value="Dinheiro">Dinheiro</option>
+                  <option value="Brinde">Brinde</option>
+                </select>
+              </div>
+              <div class="form-group" id="grupo-parcelas" style="display:none"><label>Parcelas</label>
+                <select id="mov-parcelas"><option value="2">2x</option><option value="3">3x</option><option value="4">4x</option><option value="5">5x</option><option value="6">6x</option><option value="8">8x</option><option value="10">10x</option><option value="12">12x</option></select>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:20px;display:flex;gap:10px">
+          <button class="btn-primary" onclick="registrarMovimentacao()">✓ Registrar</button>
+          <button class="btn-sec" onclick="limparForm()">✕ Limpar</button>
+        </div>
+        <div class="feedback" id="mov-feedback"></div>
+      </div>
+    </div>
+
+    <!-- MULTI MODE (CART) -->
+    <div id="mov-multi-panel" style="display:none">
+      <div class="cart-section">
+        <h2 style="font-size:1rem;font-weight:600;margin-bottom:6px;color:var(--accent2)">🛒 Venda Múltipla</h2>
+        <p style="font-size:0.8rem;color:var(--text3);margin-bottom:18px">Adicione os produtos do cliente ao carrinho e finalize a venda de uma só vez.</p>
+
+        <!-- ADD ITEM ROW -->
+        <div class="cart-add-row">
+          <div class="form-group">
+            <label>Código</label>
+            <input type="text" id="cart-cod" placeholder="Ex: 101" oninput="cartAutoFill(this.value)" autocomplete="off" style="width:100%">
+          </div>
+          <div class="form-group" style="position:relative">
+            <label>Buscar produto</label>
+            <input type="text" id="cart-busca" placeholder="Nome ou referência..." oninput="cartBuscaNome(this.value)" autocomplete="off">
+            <div id="cart-autocomplete" style="display:none;position:absolute;top:100%;left:0;right:0;background:#1a2235;border:1px solid #1e2d45;border-radius:0 0 8px 8px;z-index:200;max-height:220px;overflow-y:auto;"></div>
+          </div>
+          <div class="form-group">
+            <label>Qtd</label>
+            <input type="number" id="cart-qtd" value="1" min="1" class="qty-input" style="width:100%">
+          </div>
+          <button class="btn-add-cart" onclick="adicionarAoCarrinho()">+ Adicionar</button>
+        </div>
+
+        <!-- PRODUCT PREVIEW -->
+        <div id="cart-preview" style="display:none;background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.15);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:0.82rem;display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+          <span id="cart-preview-nome" style="font-weight:600;color:var(--text)"></span>
+          <span id="cart-preview-cat" style="color:var(--text2)"></span>
+          <span>Estoque disp.: <b id="cart-preview-estoque" style="color:var(--accent2);font-family:var(--mono)"></b></span>
+          <span>Preço venda: <b id="cart-preview-preco" style="color:var(--warn);font-family:var(--mono)"></b></span>
+        </div>
+
+        <!-- CART ITEMS -->
+        <div id="cart-items-wrap">
+          <div id="cart-empty" class="cart-empty">🛒 Carrinho vazio — adicione produtos acima</div>
+          <div id="cart-items-header" class="cart-items-header" style="display:none">
+            <span>Código</span><span>Produto</span><span>Qtd</span><span>Disp.</span><span>Preço Unit.</span><span>Subtotal</span><span></span>
+          </div>
+          <div id="cart-items-list"></div>
+        </div>
+
+        <!-- CART SUMMARY & CHECKOUT -->
+        <div id="cart-checkout" style="display:none">
+          <div class="cart-summary">
+            <div class="cart-summary-row"><span style="color:var(--text2)">Itens no carrinho</span><span class="val" id="cart-sum-qtd">0 unidades</span></div>
+            <div class="cart-summary-row"><span style="color:var(--text2)">Valor total estimado</span><span class="val" style="color:var(--warn)" id="cart-sum-total">R$ 0,00</span></div>
+            <div class="cart-summary-row total"><span>Total da Venda</span><span class="val" id="cart-sum-final">R$ 0,00</span></div>
+          </div>
+
+          <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:18px">
+            <div style="font-size:0.75rem;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">💰 Detalhes da Venda</div>
+            <div class="cart-payment-row">
+              <div class="form-group">
+                <label>Cliente <span style="color:var(--text3);font-weight:400">opcional</span></label>
+                <input type="text" id="cart-cliente" placeholder="Nome do cliente...">
+              </div>
+              <div class="form-group">
+                <label>Forma de Pagamento</label>
+                <select id="cart-pagamento" onchange="toggleParcelas('cart-pagamento','cart-grupo-parcelas')">
+                  <option value="">Selecione...</option>
+                  <option value="Pix">Pix</option>
+                  <option value="Mercado Livre">Mercado Livre</option>
+                  <option value="Site - VPR">Site - VPR</option>
+                  <option value="Crédito">Crédito</option>
+                  <option value="Débito">Débito</option>
+                  <option value="Parcelado">Parcelado</option>
+                  <option value="Dinheiro">Dinheiro</option>
+                  <option value="Brinde">Brinde</option>
+                </select>
+              </div>
+              <div class="form-group" id="cart-grupo-parcelas" style="display:none">
+                <label>Parcelas</label>
+                <select id="cart-parcelas"><option value="2">2x</option><option value="3">3x</option><option value="4">4x</option><option value="5">5x</option><option value="6">6x</option><option value="8">8x</option><option value="10">10x</option><option value="12">12x</option></select>
+              </div>
+            </div>
+            <div class="form-group" style="margin-top:10px">
+              <label>Data</label>
+              <input type="date" id="cart-data" style="max-width:200px">
+            </div>
+            <div class="form-group" style="margin-top:10px">
+              <label>Observação geral <span style="color:var(--text3);font-weight:400">opcional</span></label>
+              <input type="text" id="cart-obs" placeholder="NF, observações gerais da venda...">
+            </div>
+          </div>
+
+          <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn-primary" onclick="finalizarVendaMultipla()" style="background:linear-gradient(135deg,var(--accent2),#00bb66);color:#000">✓ Finalizar Venda</button>
+            <button class="btn-sec" onclick="limparCarrinho()" style="color:var(--danger);border-color:rgba(255,71,87,0.3)">🗑 Limpar Carrinho</button>
+          </div>
+          <div class="feedback" id="cart-feedback"></div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- ESTOQUE -->
@@ -543,6 +686,19 @@ function renderDashboard(){
 
 // ─── MOVIMENTAÇÃO ────────────────────────────────────────────
 let tipoSel='entrada';
+let movMode='single'; // 'single' | 'multi'
+
+function setMovMode(mode){
+  movMode=mode;
+  document.getElementById('btn-mode-single').className='mov-mode-btn'+(mode==='single'?' active-single':'');
+  document.getElementById('btn-mode-multi').className='mov-mode-btn'+(mode==='multi'?' active-multi':'');
+  document.getElementById('mov-single-panel').style.display=mode==='single'?'block':'none';
+  document.getElementById('mov-multi-panel').style.display=mode==='multi'?'block':'none';
+  if(mode==='multi'){
+    document.getElementById('cart-data').value=new Date().toISOString().slice(0,10);
+  }
+}
+
 function setTipo(t){
   tipoSel=t;
   document.getElementById('btn-entrada').className='tipo-btn'+(t==='entrada'?' active-entrada':'');
@@ -550,11 +706,237 @@ function setTipo(t){
   const cs=document.getElementById('campos-saida');
   if(cs) cs.style.display=t==='saida'?'block':'none';
 }
+
+// ─── CARRINHO (VENDA MÚLTIPLA) ────────────────────────────────
+let cartItems = []; // [{codigo, nome, catId, qtd, unidade, venda, estDisp}]
+
+function cartAutoFill(cod){
+  const p=getProd(cod);
+  const preview=document.getElementById('cart-preview');
+  if(p){
+    const disp=getEstoqueDisponivel(p);
+    document.getElementById('cart-preview-nome').textContent=p.nome;
+    document.getElementById('cart-preview-cat').textContent=getCat(p.catId).nome;
+    document.getElementById('cart-preview-estoque').textContent=disp+' '+(p.unidade||'un');
+    document.getElementById('cart-preview-preco').textContent=p.venda!=null?fmtBRL(p.venda):'—';
+    preview.style.display='flex';
+  } else {
+    preview.style.display='none';
+  }
+}
+
+function cartBuscaNome(val){
+  const box=document.getElementById('cart-autocomplete');
+  if(!val||val.length<2){box.style.display='none';return;}
+  const results=state.produtos.filter(p=>
+    p.nome.toLowerCase().includes(val.toLowerCase())||
+    (p.ref&&p.ref.toLowerCase().includes(val.toLowerCase()))
+  ).slice(0,8);
+  if(!results.length){box.style.display='none';return;}
+  box.innerHTML=results.map(p=>{
+    const cat=getCat(p.catId);
+    const disp=getEstoqueDisponivel(p);
+    return `<div onclick="cartSelecionarProduto(${p.codigo})" style="padding:9px 14px;cursor:pointer;border-bottom:1px solid #1e2d45;display:flex;justify-content:space-between;align-items:center;" onmouseover="this.style.background='#243050'" onmouseout="this.style.background=''">
+      <div>
+        <span style="font-size:0.85rem;color:#e2e8f0">${p.nome}</span>
+        ${p.ref?`<span style="font-size:0.72rem;color:var(--text3);margin-left:8px">🏷 ${p.ref}</span>`:''}
+      </div>
+      <div style="text-align:right">
+        <span class="code-badge">${p.codigo}</span>
+        <div style="font-size:0.7rem;color:${cat.cor};margin-top:2px">${cat.nome}</div>
+        <div style="font-size:0.7rem;color:${disp>0?'var(--accent2)':'var(--danger)'}">${disp} disp.</div>
+      </div>
+    </div>`;
+  }).join('');
+  box.style.display='block';
+}
+
+function cartSelecionarProduto(codigo){
+  document.getElementById('cart-cod').value=codigo;
+  document.getElementById('cart-autocomplete').style.display='none';
+  document.getElementById('cart-busca').value='';
+  cartAutoFill(codigo);
+  document.getElementById('cart-qtd').focus();
+}
+
+function adicionarAoCarrinho(){
+  const cod=parseInt(document.getElementById('cart-cod').value);
+  const qtd=parseInt(document.getElementById('cart-qtd').value)||1;
+  if(!cod||isNaN(cod)){toast('Informe o código do produto.','error');return;}
+  const p=getProd(cod);
+  if(!p){toast('Produto não encontrado: '+cod,'error');return;}
+  // Calculate total already in cart for this product
+  const jaNoCarrinho=cartItems.filter(i=>i.codigo===p.codigo).reduce((s,i)=>s+i.qtd,0);
+  const disp=getEstoqueDisponivel(p);
+  if(qtd<=0){toast('Quantidade deve ser maior que zero.','error');return;}
+  if(jaNoCarrinho+qtd>disp){
+    toast('Estoque insuficiente! Disponível: '+(disp-jaNoCarrinho),'error');return;
+  }
+  // If product already in cart, just update qty
+  const existing=cartItems.find(i=>i.codigo===p.codigo);
+  if(existing){
+    existing.qtd+=qtd;
+  } else {
+    cartItems.push({
+      codigo:p.codigo, nome:p.nome, catId:p.catId,
+      qtd, unidade:p.unidade||'un',
+      venda:p.venda!=null?parseFloat(p.venda):null,
+      estDisp:disp
+    });
+  }
+  // Reset add row
+  document.getElementById('cart-cod').value='';
+  document.getElementById('cart-busca').value='';
+  document.getElementById('cart-qtd').value='1';
+  document.getElementById('cart-preview').style.display='none';
+  document.getElementById('cart-autocomplete').style.display='none';
+  renderCarrinho();
+  toast('✅ '+p.nome+' × '+qtd+' adicionado ao carrinho');
+  document.getElementById('cart-cod').focus();
+}
+
+function removerDoCarrinho(codigo){
+  cartItems=cartItems.filter(i=>i.codigo!==codigo);
+  renderCarrinho();
+}
+
+function atualizarQtdCarrinho(codigo, novaQtd){
+  const item=cartItems.find(i=>i.codigo===codigo);
+  if(!item) return;
+  const p=getProd(codigo);
+  const disp=p?getEstoqueDisponivel(p):item.estDisp;
+  // Discount current item qty from disp check
+  const outrosNoCarrinho=cartItems.filter(i=>i.codigo===codigo&&i!==item).reduce((s,i)=>s+i.qtd,0);
+  const maxDisp=disp+item.qtd-outrosNoCarrinho; // available + what was already reserved for this item
+  if(novaQtd<=0){removerDoCarrinho(codigo);return;}
+  if(novaQtd>maxDisp){
+    toast('Máximo disponível: '+maxDisp,'warn');
+    item.qtd=maxDisp;
+  } else {
+    item.qtd=novaQtd;
+  }
+  renderCarrinho();
+}
+
+function renderCarrinho(){
+  const badge=document.getElementById('cart-badge');
+  const totalItens=cartItems.reduce((s,i)=>s+i.qtd,0);
+  if(badge){
+    badge.textContent=cartItems.length;
+    badge.style.display=cartItems.length>0?'inline':'none';
+  }
+  const header=document.getElementById('cart-items-header');
+  const empty=document.getElementById('cart-empty');
+  const checkout=document.getElementById('cart-checkout');
+  const list=document.getElementById('cart-items-list');
+  if(cartItems.length===0){
+    if(empty) empty.style.display='block';
+    if(header) header.style.display='none';
+    if(checkout) checkout.style.display='none';
+    if(list) list.innerHTML='';
+    return;
+  }
+  if(empty) empty.style.display='none';
+  if(header) header.style.display='grid';
+  if(checkout) checkout.style.display='block';
+  // Render items
+  list.innerHTML=cartItems.map(item=>{
+    const subtotal=item.venda!=null?item.venda*item.qtd:null;
+    return `<div class="cart-item">
+      <span class="item-code">${item.codigo}</span>
+      <span class="item-name">${item.nome}</span>
+      <span>
+        <input type="number" class="qty-input" value="${item.qtd}" min="1" max="${item.estDisp+item.qtd}"
+          onchange="atualizarQtdCarrinho(${item.codigo},parseInt(this.value)||1)"
+          style="width:60px;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;text-align:center;padding:5px;">
+        <span style="font-size:0.72rem;color:var(--text3);margin-left:4px">${item.unidade}</span>
+      </span>
+      <span class="item-stock">${item.estDisp} disp.</span>
+      <span class="item-price">${item.venda!=null?fmtBRL(item.venda):'—'}</span>
+      <span class="item-subtotal">${subtotal!=null?fmtBRL(subtotal):'—'}</span>
+      <button class="btn-remove-item" onclick="removerDoCarrinho(${item.codigo})">✕</button>
+    </div>`;
+  }).join('');
+  // Summary
+  const totalValor=cartItems.reduce((s,i)=>s+(i.venda!=null?i.venda*i.qtd:0),0);
+  const temPreco=cartItems.some(i=>i.venda!=null);
+  document.getElementById('cart-sum-qtd').textContent=totalItens+' unidade'+(totalItens!==1?'s':'');
+  document.getElementById('cart-sum-total').textContent=temPreco?fmtBRL(totalValor):'—';
+  document.getElementById('cart-sum-final').textContent=temPreco?fmtBRL(totalValor):'Sem preços cadastrados';
+}
+
+function limparCarrinho(){
+  if(cartItems.length>0&&!confirm('Limpar o carrinho?')) return;
+  cartItems=[];
+  document.getElementById('cart-cod').value='';
+  document.getElementById('cart-busca').value='';
+  document.getElementById('cart-qtd').value='1';
+  document.getElementById('cart-preview').style.display='none';
+  document.getElementById('cart-pagamento').value='';
+  document.getElementById('cart-cliente').value='';
+  document.getElementById('cart-obs').value='';
+  document.getElementById('cart-grupo-parcelas').style.display='none';
+  document.getElementById('cart-data').value=new Date().toISOString().slice(0,10);
+  renderCarrinho();
+}
+
+function finalizarVendaMultipla(){
+  if(cartItems.length===0){toast('Carrinho vazio!','error');return;}
+  const pagamento=document.getElementById('cart-pagamento').value||'';
+  const parcelas=pagamento==='Parcelado'?document.getElementById('cart-parcelas').value:'';
+  const cliente=document.getElementById('cart-cliente').value.trim();
+  const obsGeral=document.getElementById('cart-obs').value.trim();
+  const cartDataVal=document.getElementById('cart-data').value;
+  const movData=cartDataVal?(cartDataVal+'T12:00:00.000Z'):new Date().toISOString();
+  // Validate all stock one more time
+  for(const item of cartItems){
+    const p=getProd(item.codigo);
+    if(!p){toast('Produto '+item.codigo+' não encontrado!','error');return;}
+    const disp=getEstoqueDisponivel(p);
+    if(item.qtd>disp){toast('Estoque insuficiente para '+p.nome+'. Disponível: '+disp,'error');return;}
+  }
+  // Process all items
+  const obsBase=(cliente?'Cliente: '+cliente+(obsGeral?' — '+obsGeral:''):(obsGeral||'Venda múltipla'));
+  for(const item of cartItems){
+    const p=getProd(item.codigo);
+    p.estoque-=item.qtd;
+    p.ultimaMov=movData;
+    const valorNeg=pagamento==='Brinde'?0:null; // per-item value = standard price
+    state.movimentacoes.push({
+      id:Date.now()+Math.random(),
+      data:movData,
+      codigo:p.codigo,
+      nome:p.nome,
+      tipo:'saida',
+      qtd:item.qtd,
+      saldo:p.estoque,
+      obs:obsBase,
+      valorNeg,
+      pagamento,
+      parcelas
+    });
+    if(p.estoque===0) toast(p.nome+' ZERADO!','error');
+    else if(p.estoque<=p.minimo) toast(p.nome+' abaixo do mínimo!','warn');
+  }
+  saveState();updateBadge();
+  const totalItens=cartItems.reduce((s,i)=>s+i.qtd,0);
+  const totalValor=cartItems.reduce((s,i)=>s+(i.venda!=null?i.venda*i.qtd:0),0);
+  toast('✅ Venda finalizada! '+cartItems.length+' produto(s), '+totalItens+' itens'+(totalValor>0?' — '+fmtBRL(totalValor):''));
+  // Show feedback
+  const fb=document.getElementById('cart-feedback');
+  if(fb){
+    fb.textContent='✅ Venda registrada com sucesso! '+cartItems.length+' produto(s) processado(s).';
+    fb.className='feedback success show';
+    setTimeout(()=>fb.classList.remove('show'),5000);
+  }
+  limparCarrinho();
+  renderCarrinho();
+}
 function toggleParcelas(selId,grpId){
   const v=document.getElementById(selId)?.value;
   const g=document.getElementById(grpId);
   if(g) g.style.display=v==='Parcelado'?'block':'none';
-  // Brinde: forçar valor 0 e desabilitar campo
+  // Brinde: forçar valor 0 e desabilitar campo (apenas para saída simples e reserva)
   const valorMap={'mov-pagamento':'mov-valor-neg','cres-pagamento':'cres-valor'};
   const valorId=valorMap[selId];
   if(valorId){
@@ -1671,6 +2053,10 @@ function selecionarProdutoMov(codigo) {
 document.addEventListener('click', (e) => {
   if(!e.target.closest('#mov-autocomplete') && e.target.id !== 'mov-busca-nome') {
     const box = document.getElementById('mov-autocomplete');
+    if(box) box.style.display='none';
+  }
+  if(!e.target.closest('#cart-autocomplete') && e.target.id !== 'cart-busca') {
+    const box = document.getElementById('cart-autocomplete');
     if(box) box.style.display='none';
   }
 });
