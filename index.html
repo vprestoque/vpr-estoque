@@ -2605,17 +2605,22 @@ function resetTheme() {
   showToast('Aparência restaurada ao padrão','info');
 }
 
-function toggleThemePanel(e) {
+window.toggleThemePanel = function(e) {
   e && e.stopPropagation();
   const p = document.getElementById('theme-panel');
   const b = document.getElementById('theme-backdrop');
+  if (!p) return;
   const open = p.classList.toggle('open');
   b.classList.toggle('open', open);
 }
-function closeThemePanel() {
+window.closeThemePanel = function() {
   document.getElementById('theme-panel')?.classList.remove('open');
   document.getElementById('theme-backdrop')?.classList.remove('open');
 }
+window.applyTheme  = applyTheme;
+window.applyAccent = applyAccent;
+window.applySize   = applySize;
+window.resetTheme  = resetTheme;
 
 window._setUserRole = async function(uid, role) {
   await setDoc(doc(db,"users",uid),{role},{merge:true});
