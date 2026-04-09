@@ -164,6 +164,32 @@
   .btn-add-cart:hover{background:rgba(0,255,136,0.2);}
   .cart-payment-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:14px;}
   .cart-badge-count{background:var(--accent2);color:#000;font-size:0.65rem;padding:2px 6px;border-radius:10px;font-weight:700;}
+
+  /* ── THEME CUSTOMIZER ────────────────────────────────────────── */
+  #theme-btn{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--text2);padding:7px 12px;border-radius:8px;font-size:0.82rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px;}
+  #theme-btn:hover{border-color:var(--accent);color:var(--accent);}
+  #theme-panel{position:fixed;top:80px;right:24px;z-index:2000;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;width:300px;box-shadow:0 20px 60px rgba(0,0,0,0.5);display:none;animation:panelIn .2s ease;}
+  #theme-panel.open{display:block;}
+  @keyframes panelIn{from{opacity:0;transform:translateY(-10px);}to{opacity:1;transform:translateY(0);}}
+  .tp-title{font-size:0.8rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);font-weight:700;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;}
+  .tp-section{margin-bottom:18px;}
+  .tp-label{font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--text2);font-weight:600;margin-bottom:10px;}
+  .tp-themes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .tp-theme{padding:8px 6px;border-radius:9px;border:2px solid transparent;cursor:pointer;text-align:center;font-size:0.72rem;font-weight:600;transition:all .2s;background:var(--surface2);}
+  .tp-theme:hover{border-color:rgba(255,255,255,0.2);}
+  .tp-theme.active{border-color:var(--accent);}
+  .tp-theme .th-dot{width:22px;height:22px;border-radius:50%;margin:0 auto 5px;display:block;}
+  .tp-accents{display:flex;gap:8px;flex-wrap:wrap;}
+  .tp-accent{width:28px;height:28px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:all .2s;}
+  .tp-accent:hover,.tp-accent.active{border-color:rgba(255,255,255,0.8);transform:scale(1.15);}
+  .tp-sizes{display:flex;gap:8px;}
+  .tp-size{flex:1;padding:7px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text2);cursor:pointer;font-family:var(--sans);font-weight:600;text-align:center;transition:all .2s;}
+  .tp-size:hover{border-color:rgba(255,255,255,0.2);}
+  .tp-size.active{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,0.08);}
+  .tp-reset{width:100%;padding:9px;border:1px solid rgba(255,71,87,0.3);background:rgba(255,71,87,0.07);color:var(--danger);border-radius:8px;cursor:pointer;font-family:var(--sans);font-size:0.8rem;margin-top:4px;transition:all .2s;}
+  .tp-reset:hover{background:rgba(255,71,87,0.15);}
+  #theme-backdrop{position:fixed;inset:0;z-index:1999;display:none;}
+  #theme-backdrop.open{display:block;}
 </style>
 </head>
 <body>
@@ -2512,6 +2538,85 @@ async function getUserRole(uid) {
   return "operador";
 }
 
+// ── THEME CUSTOMIZER ─────────────────────────────────────────────
+const THEMES = {
+  dark:     { bg:'#0a0e1a', surface:'#111827', surface2:'#1a2235', border:'#1e2d45', text:'#e2e8f0', text2:'#7a8fa6', text3:'#4a5f75' },
+  midnight: { bg:'#05080f', surface:'#0d1117', surface2:'#141b24', border:'#1a2538', text:'#dde4ec', text2:'#6b7f96', text3:'#3d5068' },
+  slate:    { bg:'#0f1923', surface:'#182232', surface2:'#1e2d40', border:'#253547', text:'#e0e8f0', text2:'#708899', text3:'#405570' },
+  forest:   { bg:'#0a1510', surface:'#111f17', surface2:'#182a1f', border:'#1e3828', text:'#ddeee4', text2:'#6a8f76', text3:'#3d5c47' },
+  light:    { bg:'#f0f4f8', surface:'#ffffff', surface2:'#e8eef4', border:'#d0dae4', text:'#1a2535', text2:'#4a6075', text3:'#8099aa' },
+  sepia:    { bg:'#f5f0e8', surface:'#fdf9f2', surface2:'#ede5d0', border:'#d8ccb4', text:'#2d2418', text2:'#6b5840', text3:'#9a876a' },
+};
+const ACCENTS = {
+  cyan:   '#00d4ff', green: '#00ff88', purple: '#a855f7',
+  orange: '#f97316', pink:  '#ec4899', gold:   '#eab308', red: '#ef4444'
+};
+const SIZES = { sm: '87.5%', md: '100%', lg: '112.5%' };
+
+function _themeKey() { return 'vpr_theme_' + (window._currentUser?.uid || 'guest'); }
+
+function loadUserTheme() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(_themeKey()) || '{}');
+    if (saved.theme)  applyTheme(saved.theme, true);
+    if (saved.accent) applyAccent(saved.accent, ACCENTS[saved.accent], true);
+    if (saved.size)   applySize(saved.size, true);
+  } catch(e) {}
+}
+
+function _saveThemePref(patch) {
+  try {
+    const cur = JSON.parse(localStorage.getItem(_themeKey()) || '{}');
+    localStorage.setItem(_themeKey(), JSON.stringify({...cur, ...patch}));
+  } catch(e) {}
+}
+
+function applyTheme(name, silent) {
+  const t = THEMES[name]; if (!t) return;
+  const r = document.documentElement.style;
+  r.setProperty('--bg', t.bg); r.setProperty('--surface', t.surface);
+  r.setProperty('--surface2', t.surface2); r.setProperty('--border', t.border);
+  r.setProperty('--text', t.text); r.setProperty('--text2', t.text2); r.setProperty('--text3', t.text3);
+  document.querySelectorAll('.tp-theme').forEach(el => el.classList.toggle('active', el.dataset.theme === name));
+  if (!silent) _saveThemePref({theme: name});
+}
+
+function applyAccent(name, hex, silent) {
+  if (!hex) hex = ACCENTS[name];
+  document.documentElement.style.setProperty('--accent', hex);
+  // Derive a complementary secondary accent
+  document.querySelectorAll('.tp-accent').forEach(el => el.classList.toggle('active', el.dataset.accent === name));
+  if (!silent) _saveThemePref({accent: name});
+}
+
+function applySize(name, silent) {
+  document.documentElement.style.fontSize = SIZES[name] || '100%';
+  document.querySelectorAll('.tp-size').forEach(el => el.classList.toggle('active', el.dataset.size === name));
+  if (!silent) _saveThemePref({size: name});
+}
+
+function resetTheme() {
+  localStorage.removeItem(_themeKey());
+  const r = document.documentElement.style;
+  r.removeProperty('--bg'); r.removeProperty('--surface'); r.removeProperty('--surface2');
+  r.removeProperty('--border'); r.removeProperty('--text'); r.removeProperty('--text2');
+  r.removeProperty('--text3'); r.removeProperty('--accent'); r.removeProperty('fontSize');
+  document.querySelectorAll('.tp-theme,.tp-accent,.tp-size').forEach(el => el.classList.remove('active'));
+  showToast('Aparência restaurada ao padrão','info');
+}
+
+function toggleThemePanel(e) {
+  e && e.stopPropagation();
+  const p = document.getElementById('theme-panel');
+  const b = document.getElementById('theme-backdrop');
+  const open = p.classList.toggle('open');
+  b.classList.toggle('open', open);
+}
+function closeThemePanel() {
+  document.getElementById('theme-panel')?.classList.remove('open');
+  document.getElementById('theme-backdrop')?.classList.remove('open');
+}
+
 window._setUserRole = async function(uid, role) {
   await setDoc(doc(db,"users",uid),{role},{merge:true});
 }
@@ -2571,15 +2676,58 @@ onAuthStateChanged(auth, async (user) => {
       window._state._users = list;
     } catch(e){}
 
-    // Add user info + logout button to header
+    // Add user info + theme btn + logout button to header
     if (!document.getElementById("user-bar")) {
       const bar = document.createElement("div");
       bar.id = "user-bar";
       bar.style.cssText="display:flex;align-items:center;gap:12px;";
       bar.innerHTML = `<span style="font-size:0.75rem;color:#7a8fa6">${user.email}</span>
         <span style="font-size:0.68rem;padding:3px 8px;border-radius:6px;background:${role==='admin'?'rgba(0,212,255,0.1)':'rgba(0,255,136,0.1)'};color:${role==='admin'?'var(--accent)':'var(--accent2)'};">${role==='admin'?'👑 Admin':'👤 Operador'}</span>
+        <button id="theme-btn" onclick="toggleThemePanel(event)" title="Personalizar aparência">🎨 Tema</button>
         <button onclick="window._authSignOut()" style="background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.3);color:#ff4757;padding:7px 14px;border-radius:8px;font-size:0.8rem;cursor:pointer;">Sair</button>`;
       document.querySelector("header").appendChild(bar);
+      // Inject theme panel + backdrop into body
+      if (!document.getElementById("theme-panel")) {
+        document.body.insertAdjacentHTML('beforeend', `
+          <div id="theme-backdrop" onclick="closeThemePanel()"></div>
+          <div id="theme-panel">
+            <div class="tp-title">🎨 Personalizar <span style="cursor:pointer;font-size:1rem;font-weight:400" onclick="closeThemePanel()">✕</span></div>
+            <div class="tp-section">
+              <div class="tp-label">Tema Base</div>
+              <div class="tp-themes">
+                <div class="tp-theme" data-theme="dark" onclick="applyTheme('dark')"><span class="th-dot" style="background:linear-gradient(135deg,#0a0e1a,#111827)"></span>Dark</div>
+                <div class="tp-theme" data-theme="midnight" onclick="applyTheme('midnight')"><span class="th-dot" style="background:linear-gradient(135deg,#05080f,#0d1117)"></span>Midnight</div>
+                <div class="tp-theme" data-theme="slate" onclick="applyTheme('slate')"><span class="th-dot" style="background:linear-gradient(135deg,#0f1923,#182232)"></span>Slate</div>
+                <div class="tp-theme" data-theme="forest" onclick="applyTheme('forest')"><span class="th-dot" style="background:linear-gradient(135deg,#0a1510,#111f17)"></span>Forest</div>
+                <div class="tp-theme" data-theme="light" onclick="applyTheme('light')"><span class="th-dot" style="background:linear-gradient(135deg,#f0f4f8,#e2e8f0)"></span>Light</div>
+                <div class="tp-theme" data-theme="sepia" onclick="applyTheme('sepia')"><span class="th-dot" style="background:linear-gradient(135deg,#f5f0e8,#ede5d0)"></span>Sepia</div>
+              </div>
+            </div>
+            <div class="tp-section">
+              <div class="tp-label">Cor de Destaque</div>
+              <div class="tp-accents">
+                <div class="tp-accent" data-accent="cyan" style="background:#00d4ff" onclick="applyAccent('cyan','#00d4ff')" title="Ciano"></div>
+                <div class="tp-accent" data-accent="green" style="background:#00ff88" onclick="applyAccent('green','#00ff88')" title="Verde"></div>
+                <div class="tp-accent" data-accent="purple" style="background:#a855f7" onclick="applyAccent('purple','#a855f7')" title="Roxo"></div>
+                <div class="tp-accent" data-accent="orange" style="background:#f97316" onclick="applyAccent('orange','#f97316')" title="Laranja"></div>
+                <div class="tp-accent" data-accent="pink" style="background:#ec4899" onclick="applyAccent('pink','#ec4899')" title="Rosa"></div>
+                <div class="tp-accent" data-accent="gold" style="background:#eab308" onclick="applyAccent('gold','#eab308')" title="Dourado"></div>
+                <div class="tp-accent" data-accent="red" style="background:#ef4444" onclick="applyAccent('red','#ef4444')" title="Vermelho"></div>
+              </div>
+            </div>
+            <div class="tp-section">
+              <div class="tp-label">Tamanho do Texto</div>
+              <div class="tp-sizes">
+                <div class="tp-size" data-size="sm" onclick="applySize('sm')" style="font-size:0.75rem">P</div>
+                <div class="tp-size" data-size="md" onclick="applySize('md')" style="font-size:0.9rem">M</div>
+                <div class="tp-size" data-size="lg" onclick="applySize('lg')" style="font-size:1.05rem">G</div>
+              </div>
+            </div>
+            <button class="tp-reset" onclick="resetTheme()">↺ Restaurar Padrão</button>
+          </div>
+        `);
+        loadUserTheme();
+      }
     }
 
     try {
