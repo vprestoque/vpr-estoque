@@ -446,7 +446,7 @@
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
       <input type="text" placeholder="🔍 Buscar produto..." id="busca-estoque" oninput="renderEstoque()" style="max-width:240px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <select id="filtro-cat" onchange="renderEstoque()" style="max-width:200px"><option value="">Todas categorias</option></select>
+        <select id="filtro-cat" onchange="_estoqueSortCol=null;_estoqueSortDir='asc';renderEstoque()" style="max-width:200px"><option value="">Todas categorias</option></select>
         <select id="filtro-status" onchange="renderEstoque()" style="max-width:130px">
           <option value="">Todos</option><option value="ok">Normal</option>
           <option value="low">Baixo</option><option value="out">Zerado</option>
@@ -1342,6 +1342,36 @@ function toggleVerArquivados(){
   if(banner) banner.style.display=_verArquivadosEstoque?'block':'none';
   renderEstoque();
 }
+// ─── SORT STATE ──────────────────────────────────────────────
+let _estoqueSortCol=null, _estoqueSortDir='asc';
+function sortEstoque(colKey){
+  if(_estoqueSortCol===colKey){
+    _estoqueSortDir=_estoqueSortDir==='asc'?'desc':'asc';
+  } else {
+    _estoqueSortCol=colKey;
+    _estoqueSortDir='asc';
+  }
+  renderEstoque();
+}
+function _getSortVal(p,colKey){
+  if(colKey==='codigo') return Number(p.codigo)||0;
+  if(colKey==='nome') return (p.nome||'').toLowerCase();
+  if(colKey==='cat'){ const c=getCat(p.catId); return (c.nome||'').toLowerCase(); }
+  if(colKey==='estoque') return Number(p.estoque)||0;
+  if(colKey==='minimo') return Number(p.minimo)||0;
+  if(colKey==='custo') return Number(p.custo)||0;
+  if(colKey==='venda') return Number(p.venda)||0;
+  if(colKey==='ultima') return daysSince(p.ultimaMov);
+  if(colKey==='status'){ const s=getStatus(p); return s==='out'?0:s==='low'?1:2; }
+  if(colKey.startsWith('x:')){
+    const xk=colKey.replace('x:','');
+    const v=p.extras?.[xk];
+    if(v==null||v==='') return -Infinity;
+    const n=parseFloat(String(v).replace(',','.'));
+    return isNaN(n)?(v+'').toLowerCase():n;
+  }
+  return '';
+}
 function renderEstoque(){
   const busca=document.getElementById('busca-estoque').value.toLowerCase(),
     filtCat=document.getElementById('filtro-cat').value,
@@ -1355,10 +1385,30 @@ function renderEstoque(){
     const cat=getCat(p.catId);
     return(!busca||p.nome.toLowerCase().includes(busca)||String(p.codigo).includes(busca)||cat.nome.toLowerCase().includes(busca))&&
       (!filtCat||p.catId===parseInt(filtCat))&&(!filtStatus||getStatus(p)===filtStatus);
-  }).sort((a,b)=>a.codigo-b.codigo);
+  });
+  // Ordenação: por coluna clicada ou padrão por código
+  if(_estoqueSortCol){
+    prods.sort((a,b)=>{
+      const va=_getSortVal(a,_estoqueSortCol), vb=_getSortVal(b,_estoqueSortCol);
+      let cmp=0;
+      if(typeof va==='number'&&typeof vb==='number') cmp=va-vb;
+      else cmp=String(va)<String(vb)?-1:String(va)>String(vb)?1:0;
+      return _estoqueSortDir==='asc'?cmp:-cmp;
+    });
+  } else {
+    prods.sort((a,b)=>a.codigo-b.codigo);
+  }
   const catId=filtCat?parseInt(filtCat):null;
   const cols=catId?getEstoqueCols(catId):(window._userRole==='admin'?[{k:'codigo',l:'Código'},{k:'nome',l:'Produto'},{k:'cat',l:'Categoria'},{k:'estoque',l:'Estoque'},{k:'minimo',l:'Mín.'},{k:'x:med_emb',l:'Med. Embalagem'},{k:'custo',l:'Custo'},{k:'venda',l:'Venda'},{k:'ultima',l:'Últ. Mov.'},{k:'status',l:'Status'},{k:'acao',l:''}]:[{k:'codigo',l:'Código'},{k:'nome',l:'Produto'},{k:'cat',l:'Categoria'},{k:'estoque',l:'Estoque'},{k:'minimo',l:'Mín.'},{k:'x:med_emb',l:'Med. Embalagem'},{k:'venda',l:'Venda'},{k:'ultima',l:'Últ. Mov.'},{k:'status',l:'Status'},{k:'acao',l:''}]);
-  document.getElementById('estoque-thead').innerHTML=cols.map(c=>`<th>${c.l}</th>`).join('');
+  // Colunas não ordenáveis
+  const noSort=new Set(['acao']);
+  document.getElementById('estoque-thead').innerHTML=cols.map(c=>{
+    if(noSort.has(c.k)) return`<th>${c.l}</th>`;
+    const isActive=_estoqueSortCol===c.k;
+    const arrow=isActive?(_estoqueSortDir==='asc'?' ▲':' ▼'):'';
+    const activeStyle=isActive?'color:var(--accent);':'';
+    return`<th style="cursor:pointer;user-select:none;white-space:nowrap;${activeStyle}" onclick="sortEstoque('${c.k}')" title="Ordenar por ${c.l}">${c.l}<span style="font-size:0.65rem;opacity:0.8">${arrow}</span></th>`;
+  }).join('');
   const tb=document.getElementById('tbody-estoque');
   if(!prods.length){tb.innerHTML=`<tr><td colspan="${cols.length}" style="text-align:center;color:var(--text3);padding:30px">Nenhum produto encontrado</td></tr>`;return;}
   tb.innerHTML=prods.map(p=>{
