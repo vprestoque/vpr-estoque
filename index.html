@@ -488,7 +488,7 @@
       <button class="btn-primary" onclick="abrirModalReserva()">+ Nova Reserva</button>
     </div>
     <div class="table-wrap"><table>
-      <thead><tr><th>Data</th><th>Código</th><th>Produto</th><th>Cliente</th><th>Qtd</th><th>Válida até</th><th>Obs.</th><th>Status</th><th>Ações</th></tr></thead>
+      <thead><tr><th>Data</th><th>Código</th><th>Produto</th><th>Cliente</th><th>Feita por</th><th>Qtd</th><th>Válida até</th><th>Obs.</th><th>Status</th><th>Ações</th></tr></thead>
       <tbody id="tbody-reservas"></tbody>
     </table></div>
   </div>
@@ -1202,7 +1202,7 @@ function autoFillReserva(cod){
 }
 
 function abrirModalReserva(){
-  ['res-codigo','res-nome','res-disponivel','res-cliente','res-qtd','res-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['res-codigo','res-nome','res-disponivel','res-cliente','res-qtd','res-obs','res-feita-por'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const v=document.getElementById('res-validade');
   if(v){const d=new Date();d.setDate(d.getDate()+7);v.value=d.toISOString().slice(0,10);}
   document.getElementById('modal-reserva').classList.add('show');
@@ -1214,15 +1214,17 @@ function salvarReserva(){
   const qtd=parseInt(document.getElementById('res-qtd').value);
   const validade=document.getElementById('res-validade').value;
   const obs=document.getElementById('res-obs').value.trim();
+  const feitaPor=document.getElementById('res-feita-por').value.trim();
   if(!cod||isNaN(cod)){toast('Informe o código do produto.','error');return;}
   if(!cliente){toast('Informe o nome do cliente.','error');return;}
+  if(!feitaPor){toast('Informe quem está fazendo a reserva.','error');return;}
   if(!qtd||qtd<=0){toast('Quantidade inválida.','error');return;}
   const p=getProd(cod);
   if(!p){toast('Produto não encontrado.','error');return;}
   const disp=getEstoqueDisponivel(p);
   if(qtd>disp){toast('Estoque insuficiente! Disponível: '+disp,'error');return;}
   if(!state.reservas) state.reservas=[];
-  state.reservas.push({id:Date.now(),data:new Date().toISOString(),codigo:p.codigo,nome:p.nome,cliente,qtd,validade,obs,status:'ativa'});
+  state.reservas.push({id:Date.now(),data:new Date().toISOString(),codigo:p.codigo,nome:p.nome,cliente,feitaPor,qtd,validade,obs,status:'ativa'});
   saveState();
   fecharModal('modal-reserva');
   renderReservas();
@@ -1304,13 +1306,14 @@ function renderReservas(){
       +'<td><span class="code-badge">'+r.codigo+'</span></td>'
       +'<td>'+r.nome+'</td>'
       +'<td style="font-weight:600">'+r.cliente+'</td>'
+      +'<td style="font-size:0.78rem;color:var(--text2);font-style:italic">'+(r.feitaPor||'—')+'</td>'
       +'<td style="font-family:var(--mono)">'+r.qtd+'</td>'
       +'<td style="font-size:0.78rem;color:'+(vencida?'var(--danger)':'var(--text3)')+'">'+(r.validade?fmtData(r.validade+'T12:00:00Z'):'—')+'</td>'
       +'<td style="font-size:0.78rem;color:var(--text3)">'+(r.obs||'—')+'</td>'
       +'<td><span style="font-size:0.75rem;font-weight:600;color:'+statusCor+'">'+statusLabel+'</span></td>'
       +'<td>'+acoes+'</td>'
       +'</tr>';
-  }).join('')||'<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:30px">Nenhuma reserva encontrada</td></tr>';
+  }).join('')||'<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:30px">Nenhuma reserva encontrada</td></tr>';
 }
 
 // ─── ESTOQUE ─────────────────────────────────────────────────
@@ -1418,7 +1421,7 @@ function renderEstoque(){
       if(c.k==='codigo')return`<td><span class="code-badge">${p.codigo}</span></td>`;
       if(c.k==='nome')return`<td>${p.nome}</td>`;
       if(c.k==='cat')return`<td><span class="cat-badge" style="background:${cat.cor}18;color:${cat.cor};border:1px solid ${cat.cor}33">${cat.nome}</span></td>`;
-      if(c.k==='estoque')return`<td style="font-family:var(--mono);font-weight:600;color:${p.estoque===0?'var(--danger)':p.estoque<=p.minimo?'var(--warn)':'var(--accent2)'}">${p.estoque} ${p.unidade||'un'}</td>`;
+      if(c.k==='estoque'){const disp=getEstoqueDisponivel(p);const reservado=p.estoque-disp;const cor=disp===0?'var(--danger)':disp<=p.minimo?'var(--warn)':'var(--accent2)';const badge=reservado>0?`<span title="${reservado} em reserva" style="font-size:0.65rem;background:rgba(255,184,0,0.15);color:var(--warn);border:1px solid rgba(255,184,0,0.3);border-radius:4px;padding:1px 5px;margin-left:5px">🔖-${reservado}</span>`:'';return`<td style="font-family:var(--mono);font-weight:600;color:${cor}">${disp} ${p.unidade||'un'}${badge}</td>`;}
       if(c.k==='minimo')return`<td style="color:var(--text3);font-family:var(--mono)">${p.minimo}</td>`;
       if(c.k==='custo')return window._userRole==='admin'?`<td style="font-family:var(--mono);font-size:0.79rem;color:var(--warn)">${p.custo!=null&&p.custo!==''?fmtBRL(p.custo):'<span class="nd">—</span>'}</td>`:'<td style="color:var(--text3);font-size:0.75rem">—</td>';
       if(c.k==='venda')return`<td style="font-family:var(--mono);font-size:0.79rem;color:var(--accent2)">${p.venda!=null&&p.venda!==''?fmtBRL(p.venda):'<span class="nd">—</span>'}</td>`;
@@ -2404,6 +2407,7 @@ window._state = state;
       <div class="form-group"><label>Cliente</label><input type="text" id="res-cliente" placeholder="Nome do cliente"></div>
       <div class="form-group"><label>Quantidade</label><input type="number" id="res-qtd" min="1" placeholder="0"></div>
       <div class="form-group"><label>Válida até</label><input type="date" id="res-validade"></div>
+      <div class="form-group"><label>Reserva feita por <span style="color:var(--danger);font-weight:600" title="Obrigatório">*</span></label><input type="text" id="res-feita-por" placeholder="Nome de quem está registrando a reserva"></div>
       <div class="form-group"><label>Observação <span style="color:var(--text3);font-weight:400">opcional</span></label><input type="text" id="res-obs" placeholder="Detalhes da reserva..."></div>
     </div>
     <div style="margin-top:20px;display:flex;gap:10px">
