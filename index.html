@@ -486,6 +486,7 @@
         </select>
       </div>
       <button class="btn-primary" onclick="abrirModalReserva()">+ Nova Reserva</button>
+      <button class="btn-sec" onclick="abrirModalReservaMultipla()" style="border-color:rgba(0,212,255,0.3);color:var(--accent)">📋 Reserva Múltipla</button>
     </div>
     <div class="table-wrap"><table>
       <thead><tr><th>Data</th><th>Código</th><th>Produto</th><th>Cliente</th><th>Feita por</th><th>Qtd</th><th>Válida até</th><th>Obs.</th><th>Status</th><th>Ações</th></tr></thead>
@@ -1264,6 +1265,101 @@ function salvarReserva(){
   toast('Reserva criada para '+cliente+'!');
 }
 
+
+let itensReservaMultipla=[];
+
+function abrirModalReservaMultipla(){
+  itensReservaMultipla=[];
+  ['mult-res-cliente','mult-res-feita-por','mult-res-validade','mult-res-obs','mult-busca-prod'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const v=document.getElementById('mult-res-validade');
+  if(v){const d=new Date();d.setDate(d.getDate()+7);v.value=d.toISOString().slice(0,10);}
+  const sug=document.getElementById('mult-sugestoes');if(sug){sug.style.display='none';sug.innerHTML='';}
+  renderItensMultipla();
+  document.getElementById('modal-reserva-multipla').classList.add('show');
+}
+
+function buscarProdutoMultipla(val){
+  const sug=document.getElementById('mult-sugestoes');
+  const q=val.trim().toLowerCase();
+  if(!q){sug.style.display='none';sug.innerHTML='';return;}
+  const matches=state.produtos.filter(p=>!p.arquivado&&(String(p.codigo).includes(q)||p.nome.toLowerCase().includes(q))).slice(0,8);
+  if(!matches.length){sug.style.display='none';return;}
+  sug.innerHTML=matches.map(p=>{
+    const disp=getEstoqueDisponivel(p);
+    const jaAdicionado=itensReservaMultipla.find(i=>i.codigo===p.codigo);
+    const cor=disp===0?'var(--danger)':disp<=p.minimo?'var(--warn)':'var(--accent2)';
+    return `<div onclick="adicionarItemMultipla(${p.codigo})" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;justify-content:space-between;align-items:center;transition:background .15s${jaAdicionado?';opacity:0.5':''}" onmouseover="this.style.background='rgba(0,212,255,0.08)'" onmouseout="this.style.background=''">`
+      +`<div><span style="font-family:var(--mono);font-size:0.75rem;color:var(--accent);margin-right:8px">${p.codigo}</span><span style="font-size:0.87rem">${p.nome}</span>${jaAdicionado?'<span style="font-size:0.7rem;color:var(--warn);margin-left:6px">já adicionado</span>':''}</div>`
+      +`<span style="font-family:var(--mono);font-size:0.8rem;font-weight:600;color:${cor}">${disp} ${p.unidade||'un'}</span>`
+      +`</div>`;
+  }).join('');
+  sug.style.display='block';
+}
+
+function adicionarItemMultipla(cod){
+  const p=getProd(cod);
+  if(!p) return;
+  const disp=getEstoqueDisponivel(p);
+  if(disp<=0){toast('Sem estoque disponível para '+p.nome,'error');return;}
+  if(itensReservaMultipla.find(i=>i.codigo===cod)){toast('Produto já adicionado. Ajuste a quantidade na lista.','warn');return;}
+  itensReservaMultipla.push({codigo:p.codigo,nome:p.nome,unidade:p.unidade||'un',disp,qtd:1});
+  document.getElementById('mult-busca-prod').value='';
+  const sug=document.getElementById('mult-sugestoes');sug.style.display='none';sug.innerHTML='';
+  renderItensMultipla();
+}
+
+function removerItemMultipla(cod){
+  itensReservaMultipla=itensReservaMultipla.filter(i=>i.codigo!==cod);
+  renderItensMultipla();
+}
+
+function renderItensMultipla(){
+  const el=document.getElementById('mult-lista-itens');
+  if(!el) return;
+  if(!itensReservaMultipla.length){
+    el.innerHTML='<div style="text-align:center;color:var(--text3);padding:20px;font-size:0.85rem">Nenhum produto adicionado ainda</div>';
+    return;
+  }
+  el.innerHTML=itensReservaMultipla.map((item,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.1);border-radius:8px">
+      <span style="font-family:var(--mono);font-size:0.75rem;color:var(--accent);min-width:36px">${item.codigo}</span>
+      <span style="flex:1;font-size:0.85rem">${item.nome}</span>
+      <span style="font-size:0.72rem;color:var(--text2)">máx ${item.disp}</span>
+      <input type="number" min="1" max="${item.disp}" value="${item.qtd}" style="width:60px;text-align:center;padding:4px 6px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono)" oninput="itensReservaMultipla[${i}].qtd=Math.min(Math.max(1,parseInt(this.value)||1),${item.disp});this.value=itensReservaMultipla[${i}].qtd">
+      <span style="font-size:0.75rem;color:var(--text3)">${item.unidade}</span>
+      <button onclick="removerItemMultipla(${item.codigo})" style="background:rgba(255,71,87,0.15);border:1px solid rgba(255,71,87,0.3);color:var(--danger);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:0.8rem">✕</button>
+    </div>
+  `).join('');
+}
+
+function salvarReservaMultipla(){
+  const cliente=document.getElementById('mult-res-cliente').value.trim();
+  const feitaPor=document.getElementById('mult-res-feita-por').value.trim();
+  const validade=document.getElementById('mult-res-validade').value;
+  const obs=document.getElementById('mult-res-obs').value.trim();
+  if(!cliente){toast('Informe o nome do cliente.','error');return;}
+  if(!feitaPor){toast('Informe quem está fazendo a reserva.','error');return;}
+  if(!itensReservaMultipla.length){toast('Adicione ao menos um produto.','error');return;}
+  // validate stock for all items
+  for(const item of itensReservaMultipla){
+    const p=getProd(item.codigo);
+    const disp=getEstoqueDisponivel(p);
+    if(item.qtd>disp){toast('Estoque insuficiente para '+item.nome+'. Disponível: '+disp,'error');return;}
+  }
+  if(!state.reservas) state.reservas=[];
+  const grupoId='GRP-'+Date.now();
+  itensReservaMultipla.forEach(item=>{
+    state.reservas.push({id:Date.now()+Math.random(),data:new Date().toISOString(),codigo:item.codigo,nome:item.nome,cliente,feitaPor,qtd:item.qtd,validade,obs,status:'ativa',grupoId});
+  });
+  saveState();
+  fecharModal('modal-reserva-multipla');
+  renderReservas();
+  renderEstoque();
+  toast('Reserva com '+itensReservaMultipla.length+' produto(s) criada para '+cliente+'!');
+  itensReservaMultipla=[];
+}
+
+document.addEventListener('click',function(e){const sug=document.getElementById('mult-sugestoes');if(sug&&!sug.contains(e.target)&&e.target.id!=='mult-busca-prod'){sug.style.display='none';}});
 let reservaConcluindoId=null;
 
 function abrirConcluirReserva(id){
@@ -1317,6 +1413,57 @@ function cancelarReserva(id){
   toast('Reserva cancelada.','warn');
 }
 
+
+let reservaEditandoId=null;
+
+function abrirEditarReserva(id){
+  const r=(state.reservas||[]).find(x=>x.id===id);
+  if(!r) return;
+  reservaEditandoId=id;
+  document.getElementById('edit-res-cliente').value=r.cliente||'';
+  document.getElementById('edit-res-feita-por').value=r.feitaPor||'';
+  document.getElementById('edit-res-qtd').value=r.qtd||1;
+  document.getElementById('edit-res-validade').value=r.validade||'';
+  document.getElementById('edit-res-obs').value=r.obs||'';
+  // show current product info
+  const p=getProd(r.codigo);
+  const disp=p?getEstoqueDisponivel(p)+r.qtd:0; // add back current reservation to show true available
+  document.getElementById('edit-res-info').textContent=r.codigo+' — '+r.nome+' | Disponível (excl. esta reserva): '+(p?disp+' '+(p.unidade||'un'):'?');
+  document.getElementById('modal-editar-reserva').classList.add('show');
+}
+
+function salvarEdicaoReserva(){
+  const r=(state.reservas||[]).find(x=>x.id===reservaEditandoId);
+  if(!r){toast('Reserva não encontrada.','error');return;}
+  const p=getProd(r.codigo);
+  const cliente=document.getElementById('edit-res-cliente').value.trim();
+  const feitaPor=document.getElementById('edit-res-feita-por').value.trim();
+  const qtd=parseInt(document.getElementById('edit-res-qtd').value);
+  const validade=document.getElementById('edit-res-validade').value;
+  const obs=document.getElementById('edit-res-obs').value.trim();
+  if(!cliente){toast('Informe o nome do cliente.','error');return;}
+  if(!feitaPor){toast('Informe quem fez a reserva.','error');return;}
+  if(!qtd||qtd<=0){toast('Quantidade inválida.','error');return;}
+  if(p){
+    const dispSemEstaReserva=getEstoqueDisponivel(p)+r.qtd;
+    if(qtd>dispSemEstaReserva){toast('Estoque insuficiente! Disponível: '+dispSemEstaReserva,'error');return;}
+  }
+  r.cliente=cliente; r.feitaPor=feitaPor; r.qtd=qtd; r.validade=validade; r.obs=obs;
+  saveState();
+  fecharModal('modal-editar-reserva');
+  renderReservas();
+  renderEstoque();
+  toast('Reserva atualizada!');
+}
+function excluirReserva(id){
+  if(!confirm('Excluir esta reserva do histórico permanentemente?')) return;
+  state.reservas=(state.reservas||[]).filter(x=>x.id!==id);
+  saveState();
+  renderReservas();
+  renderEstoque();
+  toast('Reserva excluída.','warn');
+}
+
 function renderReservas(){
   if(!state.reservas) state.reservas=[];
   const busca=document.getElementById('res-busca')?.value.toLowerCase()||'';
@@ -1330,9 +1477,10 @@ function renderReservas(){
     const vencida=r.status==='ativa'&&r.validade&&new Date(r.validade)<new Date();
     const statusCor=r.status==='ativa'?(vencida?'var(--danger)':'var(--warn)'):r.status==='concluida'?'var(--accent2)':'var(--text3)';
     const statusLabel=r.status==='ativa'?(vencida?'VENCIDA':'ATIVA'):r.status==='concluida'?'CONCLUÍDA':'CANCELADA';
+    const lixeira='<button class="btn-sm del" title="Excluir do histórico" onclick="excluirReserva('+r.id+')" style="opacity:0.6;padding:4px 7px">🗑</button>';
     const acoes=r.status==='ativa'
-      ?'<div style="display:flex;gap:5px"><button class="btn-sm" style="color:var(--accent2);border-color:rgba(0,255,136,0.4)" onclick="abrirConcluirReserva('+r.id+')">\u2705 Vender</button><button class="btn-sm del" onclick="cancelarReserva('+r.id+')">\u2715</button></div>'
-      :'<span style="font-size:0.75rem;color:var(--text3)">'+(r.status==='concluida'?'Vendido':'—')+'</span>';
+      ?'<div style="display:flex;gap:5px"><button class="btn-sm" style="color:var(--accent);border-color:rgba(0,212,255,0.3)" onclick="abrirEditarReserva('+r.id+')">✏️</button><button class="btn-sm" style="color:var(--accent2);border-color:rgba(0,255,136,0.4)" onclick="abrirConcluirReserva('+r.id+')">✅ Vender</button><button class="btn-sm del" onclick="cancelarReserva('+r.id+')">✕</button>'+lixeira+'</div>'
+      :'<div style="display:flex;gap:5px;align-items:center"><span style="font-size:0.75rem;color:var(--text3)">'+(r.status==='concluida'?'Vendido':'—')+'</span>'+lixeira+'</div>';
     return '<tr>'
       +'<td style="font-size:0.78rem;color:var(--text2)">'+fmtData(r.data)+'</td>'
       +'<td><span class="code-badge">'+r.codigo+'</span></td>'
@@ -2450,6 +2598,56 @@ window._state = state;
     <div style="margin-top:20px;display:flex;gap:10px">
       <button class="btn-primary" onclick="salvarReserva()">✓ Reservar</button>
       <button class="btn-sec" onclick="fecharModal('modal-reserva')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL EDITAR RESERVA -->
+<div class="modal-overlay" id="modal-editar-reserva">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-title"><span>✏️ Editar Reserva</span><button class="modal-close" onclick="fecharModal('modal-editar-reserva')">✕</button></div>
+    <div style="background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.2);border-radius:8px;padding:10px 14px;font-size:0.8rem;color:var(--accent);margin-bottom:4px" id="edit-res-info"></div>
+    <div style="display:flex;flex-direction:column;gap:14px;margin-top:14px">
+      <div class="form-group"><label>Cliente</label><input type="text" id="edit-res-cliente" placeholder="Nome do cliente"></div>
+      <div class="form-group"><label>Reserva feita por <span style="color:var(--danger);font-weight:600">*</span></label><input type="text" id="edit-res-feita-por" placeholder="Nome de quem registrou"></div>
+      <div class="form-group"><label>Quantidade</label><input type="number" id="edit-res-qtd" min="1" placeholder="0"></div>
+      <div class="form-group"><label>Válida até</label><input type="date" id="edit-res-validade"></div>
+      <div class="form-group"><label>Observação <span style="color:var(--text3);font-weight:400">opcional</span></label><input type="text" id="edit-res-obs" placeholder="Detalhes..."></div>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:10px">
+      <button class="btn-primary" onclick="salvarEdicaoReserva()">✓ Salvar Alterações</button>
+      <button class="btn-sec" onclick="fecharModal('modal-editar-reserva')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RESERVA MÚLTIPLA -->
+<div class="modal-overlay" id="modal-reserva-multipla">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-title"><span>📋 Reserva Múltipla</span><button class="modal-close" onclick="fecharModal('modal-reserva-multipla')">✕</button></div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="form-group"><label>Cliente</label><input type="text" id="mult-res-cliente" placeholder="Nome do cliente"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label>Reserva feita por <span style="color:var(--danger);font-weight:600">*</span></label><input type="text" id="mult-res-feita-por" placeholder="Quem está registrando"></div>
+        <div class="form-group"><label>Válida até</label><input type="date" id="mult-res-validade"></div>
+      </div>
+      <div class="form-group"><label>Observação <span style="color:var(--text3);font-weight:400">opcional</span></label><input type="text" id="mult-res-obs" placeholder="Detalhes da reserva..."></div>
+      <div style="border-top:1px solid var(--border);padding-top:14px">
+        <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:10px">🔍 Adicionar Produtos</div>
+        <div style="position:relative">
+          <input type="text" id="mult-busca-prod" placeholder="Digite código ou nome do produto..." oninput="buscarProdutoMultipla(this.value)" autocomplete="off">
+          <div id="mult-sugestoes" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface2);border:1px solid var(--accent);border-radius:9px;z-index:200;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.4);margin-top:4px"></div>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:14px">
+        <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:var(--text2);margin-bottom:10px">📦 Itens da Reserva</div>
+        <div id="mult-lista-itens" style="display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto"></div>
+      </div>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:10px">
+      <button class="btn-primary" onclick="salvarReservaMultipla()">✓ Confirmar Reserva</button>
+      <button class="btn-sec" onclick="fecharModal('modal-reserva-multipla')">Cancelar</button>
     </div>
   </div>
 </div>
