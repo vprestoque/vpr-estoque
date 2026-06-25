@@ -211,7 +211,7 @@
     <button class="tab-btn" onclick="showPage('historico',this)" data-page="historico">📋 Histórico</button>
     <button class="tab-btn admin-only" onclick="showPage('relatorio',this)" data-page="relatorio">📈 Relatório</button>
     <button class="tab-btn" onclick="showPage('cadastro',this)" data-page="cadastro">⚙️ Cadastro</button>
-  </nav>
+    <button class="tab-btn" onclick="showPage('importacao',this)" data-page="importacao">📦 Importação</button>
 
   <!-- DASHBOARD -->
   <div id="page-dashboard" class="page active">
@@ -542,6 +542,59 @@
     <div id="rel-comparativo"></div>
   </div>
 
+  <!-- IMPORTAÇÃO -->
+  <div id="page-importacao" class="page">
+    <!-- KPIs -->
+    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px" id="imp-kpi-grid">
+      <div class="kpi-card blue"><div class="kpi-label">Total Ativas</div><div class="kpi-value" id="imp-kpi-ativas">0</div><div class="kpi-sub">aguardando + chegou</div></div>
+      <div class="kpi-card yellow"><div class="kpi-label">Aguardando Chegada</div><div class="kpi-value" id="imp-kpi-aguardando">0</div><div class="kpi-sub">em trânsito</div></div>
+      <div class="kpi-card green"><div class="kpi-label">Sinais Recebidos</div><div class="kpi-value" id="imp-kpi-sinais">R$ 0</div><div class="kpi-sub">valor total de sinais</div></div>
+    </div>
+
+    <!-- Formulário -->
+    <div class="form-card" style="max-width:100%;margin-bottom:24px">
+      <div class="sec-label">Nova Importação</div>
+      <div class="form-grid" style="grid-template-columns:repeat(3,1fr)">
+        <div class="form-group"><label>Cliente</label><input type="text" id="imp-cliente" placeholder="Nome do cliente"></div>
+        <div class="form-group"><label>Produto / Descrição</label><input type="text" id="imp-produto" placeholder="Pode ser item não cadastrado"></div>
+        <div class="form-group"><label>Quantidade</label><input type="number" id="imp-qtd" placeholder="0" min="1"></div>
+        <div class="form-group"><label>Data Prevista de Chegada</label><input type="date" id="imp-data-chegada"></div>
+        <div class="form-group"><label>Sinal Pago (R$) <span style="color:var(--text3);font-weight:400">opcional</span></label><input type="number" id="imp-sinal" placeholder="0,00" step="0.01" min="0"></div>
+        <div class="form-group"><label>Status</label>
+          <select id="imp-status">
+            <option value="aguardando">Aguardando</option>
+            <option value="chegou">Chegou</option>
+            <option value="entregue">Entregue</option>
+          </select>
+        </div>
+        <div class="form-group full"><label>Observações</label><input type="text" id="imp-obs" placeholder="Detalhes adicionais..."></div>
+      </div>
+      <div style="margin-top:18px;display:flex;gap:10px">
+        <button class="btn-primary" onclick="salvarImportacao()">✓ Salvar Importação</button>
+        <button class="btn-sec" onclick="limparFormImportacao()">✕ Limpar</button>
+      </div>
+      <div class="feedback" id="imp-feedback"></div>
+    </div>
+
+    <!-- Filtros e tabela -->
+    <div class="panel">
+      <div class="panel-title">Importações Registradas</div>
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+        <input type="text" id="imp-busca" placeholder="🔍 Buscar cliente ou produto..." oninput="renderImportacao()" style="max-width:260px">
+        <select id="imp-filtro-status" onchange="renderImportacao()" style="max-width:180px">
+          <option value="">Todos os status</option>
+          <option value="aguardando">Aguardando</option>
+          <option value="chegou">Chegou</option>
+          <option value="entregue">Entregue</option>
+        </select>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Data</th><th>Cliente</th><th>Produto</th><th>Qtd</th><th>Chegada Prev.</th><th>Sinal</th><th>Status</th><th>Obs.</th><th>Criado por</th><th>Ações</th></tr></thead>
+        <tbody id="tbody-importacao"></tbody>
+      </table></div>
+    </div>
+  </div>
+
   <!-- CADASTRO -->
   <div id="page-cadastro" class="page">
     <div id="user-mgmt-section" style="margin-bottom:20px">
@@ -698,7 +751,7 @@ const EXTRA_DEFAULT_FIELDS=[{id:'med_emb',label:'Medida Embalagem',ph:'Ex: 30x20
 const ALL_EXTRA_IDS=['aro','tala','offset','furacao','cor','medida','tipo','medida_mm','diam_int','diam_ext','cubagem','peso','med_emb','revestimento','buzina','med_int','med_ext','material','cliente','vende_sp','obs_cons','obs_semi','tecido','cor_banco','peso_ind','medidas'];
 
 // ─── STATE ───────────────────────────────────────────────────
-let state={produtos:[],categorias:[],movimentacoes:[],editandoProd:null};
+let state={produtos:[],categorias:[],movimentacoes:[],editandoProd:null,importacoes:[]};
 
 function initData(){
   const s=localStorage.getItem('erp_v4');
@@ -724,6 +777,7 @@ function initData(){
 }
 function saveState(){
   if(!state.reservas) state.reservas=[];
+  if(!state.importacoes) state.importacoes=[];
   localStorage.setItem('erp_v4',JSON.stringify(state));
   window._state=state;
   if(window._saveToFirebase)window._saveToFirebase(state);
@@ -749,7 +803,7 @@ function showPage(page,btn){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   if(btn)btn.classList.add('active');
-  ({dashboard:renderDashboard,estoque:renderEstoque,alertas:renderAlertas,historico:renderHistorico,relatorio:renderRelatorio,cadastro:renderCadastro,reservas:renderReservas})[page]?.();
+  ({dashboard:renderDashboard,estoque:renderEstoque,alertas:renderAlertas,historico:renderHistorico,relatorio:renderRelatorio,cadastro:renderCadastro,reservas:renderReservas,importacao:renderImportacao})[page]?.();
 }
 function updateClock(){document.getElementById('live-clock').textContent=new Date().toLocaleString('pt-BR');}
 setInterval(updateClock,1000);updateClock();
@@ -1494,6 +1548,158 @@ function renderReservas(){
       +'<td>'+acoes+'</td>'
       +'</tr>';
   }).join('')||'<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:30px">Nenhuma reserva encontrada</td></tr>';
+}
+
+// ─── IMPORTAÇÃO ──────────────────────────────────────────────
+let _impEditandoId=null;
+
+function renderImportacao(){
+  state.importacoes=state.importacoes||[];
+  const busca=(document.getElementById('imp-busca')?.value||'').toLowerCase().trim();
+  const filtStatus=document.getElementById('imp-filtro-status')?.value||'';
+
+  // KPIs
+  const ativas=state.importacoes.filter(i=>i.status==='aguardando'||i.status==='chegou');
+  const aguardando=state.importacoes.filter(i=>i.status==='aguardando');
+  const totalSinais=state.importacoes.reduce((s,i)=>s+(parseFloat(i.sinal)||0),0);
+  const el=id=>document.getElementById(id);
+  if(el('imp-kpi-ativas')) el('imp-kpi-ativas').textContent=ativas.length;
+  if(el('imp-kpi-aguardando')) el('imp-kpi-aguardando').textContent=aguardando.length;
+  if(el('imp-kpi-sinais')) el('imp-kpi-sinais').textContent='R$ '+totalSinais.toFixed(2).replace('.',',');
+
+  // Filtrar
+  let lista=[...state.importacoes].sort((a,b)=>new Date(b.data)-new Date(a.data));
+  if(busca) lista=lista.filter(i=>i.cliente.toLowerCase().includes(busca)||i.produto.toLowerCase().includes(busca));
+  if(filtStatus) lista=lista.filter(i=>i.status===filtStatus);
+
+  const tbody=document.getElementById('tbody-importacao');
+  if(!tbody)return;
+  if(!lista.length){tbody.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:24px">Nenhuma importação encontrada.</td></tr>';return;}
+
+  tbody.innerHTML=lista.map(i=>{
+    const badgeClass=i.status==='entregue'?'badge-ok':i.status==='chegou'?'badge-low':'badge-out';
+    const badgeLabel=i.status==='entregue'?'Entregue':i.status==='chegou'?'Chegou':'Aguardando';
+    const dataChegada=i.dataChegada?new Date(i.dataChegada+'T00:00:00').toLocaleDateString('pt-BR'):'<span class="nd">—</span>';
+    const sinal=i.sinal?'R$ '+parseFloat(i.sinal).toFixed(2).replace('.',','):'<span class="nd">—</span>';
+    return `<tr>
+      <td>${new Date(i.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'})}</td>
+      <td>${i.cliente}</td>
+      <td>${i.produto}</td>
+      <td style="font-family:var(--mono);color:var(--accent2)">${i.qtd}</td>
+      <td>${dataChegada}</td>
+      <td style="font-family:var(--mono)">${sinal}</td>
+      <td><span class="status-badge ${badgeClass}">${badgeLabel}</span></td>
+      <td>${i.obs||'<span class="nd">—</span>'}</td>
+      <td style="font-size:0.75rem;color:var(--text3)">${i.criadoPor||'—'}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap">
+        ${i.status==='aguardando'?`<button class="btn-sm" onclick="impMarcarChegou(${i.id})" title="Marcar como Chegou">📥 Chegou</button>`:''}
+        ${i.status==='chegou'?`<button class="btn-sm" style="border-color:rgba(0,255,136,0.3);color:var(--accent2)" onclick="impMarcarEntregue(${i.id})" title="Marcar como Entregue">✅ Entregue</button>`:''}
+        <button class="btn-sm" onclick="impEditar(${i.id})" title="Editar">✏️</button>
+        <button class="btn-sm del" onclick="impExcluir(${i.id})" title="Excluir">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function salvarImportacao(){
+  state.importacoes=state.importacoes||[];
+  const el=id=>document.getElementById(id);
+  const cliente=(el('imp-cliente')?.value||'').trim();
+  const produto=(el('imp-produto')?.value||'').trim();
+  const qtd=parseInt(el('imp-qtd')?.value)||0;
+  const dataChegada=el('imp-data-chegada')?.value||'';
+  const sinal=el('imp-sinal')?.value||'';
+  const obs=(el('imp-obs')?.value||'').trim();
+  const status=el('imp-status')?.value||'aguardando';
+
+  if(!cliente){showFeedbackImp('Informe o cliente.','error');return;}
+  if(!produto){showFeedbackImp('Informe o produto/descrição.','error');return;}
+  if(!qtd||qtd<1){showFeedbackImp('Quantidade deve ser maior que zero.','error');return;}
+
+  if(_impEditandoId!==null){
+    const idx=state.importacoes.findIndex(i=>i.id===_impEditandoId);
+    if(idx!==-1){
+      state.importacoes[idx]={...state.importacoes[idx],cliente,produto,qtd,dataChegada,sinal,obs,status};
+      toast('Importação atualizada!');
+    }
+    _impEditandoId=null;
+  } else {
+    state.importacoes.push({
+      id:Date.now(),
+      data:new Date().toISOString(),
+      cliente,produto,qtd,dataChegada,sinal,obs,status,
+      criadoPor:window._currentUser?.email||''
+    });
+    toast('Importação registrada!');
+  }
+  saveState();
+  limparFormImportacao();
+  renderImportacao();
+}
+
+function limparFormImportacao(){
+  _impEditandoId=null;
+  ['imp-cliente','imp-produto','imp-qtd','imp-data-chegada','imp-sinal','imp-obs'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.value='';
+  });
+  const s=document.getElementById('imp-status');
+  if(s) s.value='aguardando';
+  const fb=document.getElementById('imp-feedback');
+  if(fb){fb.textContent='';fb.className='feedback';}
+}
+
+function showFeedbackImp(msg,type){
+  const fb=document.getElementById('imp-feedback');
+  if(!fb)return;
+  fb.textContent=msg;
+  fb.className='feedback '+(type==='error'?'error':'success')+' show';
+  setTimeout(()=>{fb.className='feedback';},3000);
+}
+
+function impMarcarChegou(id){
+  state.importacoes=state.importacoes||[];
+  const i=state.importacoes.find(x=>x.id===id);
+  if(!i)return;
+  i.status='chegou';
+  saveState();
+  renderImportacao();
+  toast('Importação marcada como Chegou!','success');
+}
+
+function impMarcarEntregue(id){
+  state.importacoes=state.importacoes||[];
+  const i=state.importacoes.find(x=>x.id===id);
+  if(!i)return;
+  i.status='entregue';
+  saveState();
+  renderImportacao();
+  toast('Importação marcada como Entregue!','success');
+}
+
+function impEditar(id){
+  state.importacoes=state.importacoes||[];
+  const i=state.importacoes.find(x=>x.id===id);
+  if(!i)return;
+  _impEditandoId=id;
+  const el=k=>document.getElementById(k);
+  if(el('imp-cliente')) el('imp-cliente').value=i.cliente||'';
+  if(el('imp-produto')) el('imp-produto').value=i.produto||'';
+  if(el('imp-qtd')) el('imp-qtd').value=i.qtd||'';
+  if(el('imp-data-chegada')) el('imp-data-chegada').value=i.dataChegada||'';
+  if(el('imp-sinal')) el('imp-sinal').value=i.sinal||'';
+  if(el('imp-obs')) el('imp-obs').value=i.obs||'';
+  if(el('imp-status')) el('imp-status').value=i.status||'aguardando';
+  el('imp-cliente')?.scrollIntoView({behavior:'smooth',block:'center'});
+  toast('Editando importação...','warn');
+}
+
+function impExcluir(id){
+  if(!confirm('Excluir esta importação?'))return;
+  state.importacoes=(state.importacoes||[]).filter(x=>x.id!==id);
+  saveState();
+  renderImportacao();
+  toast('Importação excluída.','warn');
 }
 
 // ─── ESTOQUE ─────────────────────────────────────────────────
@@ -2751,6 +2957,7 @@ async function fbSave(d) {
       categorias:JSON.stringify(d.categorias),
       movimentacoes:JSON.stringify(d.movimentacoes),
       reservas:JSON.stringify(d.reservas||[]),
+      importacoes:JSON.stringify(d.importacoes||[]),
       ts:new Date().toISOString()
     });
   } catch(e){console.error("fbSave:",e);}
@@ -2766,6 +2973,7 @@ async function fbLoad() {
         categorias:JSON.parse(d.categorias||"[]"),
         movimentacoes:JSON.parse(d.movimentacoes||"[]"),
         reservas:JSON.parse(d.reservas||"[]"),
+        importacoes:JSON.parse(d.importacoes||"[]"),
         editandoProd:null
       };
     }
@@ -2777,15 +2985,17 @@ function fbSync(){
   onSnapshot(REF,(s)=>{
     if(!s.exists())return;
     const d=s.data();
-    const np=JSON.parse(d.produtos||"[]"),nm=JSON.parse(d.movimentacoes||"[]"),nc=JSON.parse(d.categorias||"[]"),nr=JSON.parse(d.reservas||"[]");
-    if(JSON.stringify(np)!==JSON.stringify(window._state.produtos)||JSON.stringify(nm)!==JSON.stringify(window._state.movimentacoes)||JSON.stringify(nr)!==JSON.stringify(window._state.reservas||[])){
+    const np=JSON.parse(d.produtos||"[]"),nm=JSON.parse(d.movimentacoes||"[]"),nc=JSON.parse(d.categorias||"[]"),nr=JSON.parse(d.reservas||"[]"),ni=JSON.parse(d.importacoes||"[]");
+    if(JSON.stringify(np)!==JSON.stringify(window._state.produtos)||JSON.stringify(nm)!==JSON.stringify(window._state.movimentacoes)||JSON.stringify(nr)!==JSON.stringify(window._state.reservas||[])||JSON.stringify(ni)!==JSON.stringify(window._state.importacoes||[])){
       window._state.produtos=np;
       window._state.categorias=nc;
       window._state.movimentacoes=nm;
       window._state.reservas=nr;
+      window._state.importacoes=ni;
       state.reservas=nr;
+      state.importacoes=ni;
       const pg=document.querySelector(".page.active")?.id?.replace("page-","");
-      const map={dashboard:renderDashboard,estoque:renderEstoque,alertas:renderAlertas,historico:renderHistorico,relatorio:renderRelatorio,cadastro:renderCadastro,reservas:renderReservas};
+      const map={dashboard:renderDashboard,estoque:renderEstoque,alertas:renderAlertas,historico:renderHistorico,relatorio:renderRelatorio,cadastro:renderCadastro,reservas:renderReservas,importacao:renderImportacao};
       if(pg&&map[pg])map[pg]();
       updateBadge();
     }
@@ -3103,7 +3313,9 @@ onAuthStateChanged(auth, async (user) => {
         window._state.categorias=saved.categorias;
         window._state.movimentacoes=saved.movimentacoes;
         window._state.reservas=saved.reservas||[];
+        window._state.importacoes=saved.importacoes||[];
         state.reservas=saved.reservas||[];
+        state.importacoes=saved.importacoes||[];
       } else {
         await fbSave(window._state);
       }
