@@ -514,6 +514,12 @@
 
   <!-- RELATÓRIO -->
   <div id="page-relatorio" class="page">
+    <div style="display:flex;gap:8px;margin-bottom:18px;background:var(--surface);padding:4px;border-radius:10px;width:fit-content">
+      <button class="tab-btn rel-subtab active" data-subtab="geral" onclick="showRelSubtab('geral',this)">📊 Geral</button>
+      <button class="tab-btn rel-subtab" data-subtab="estoque" onclick="showRelSubtab('estoque',this)">📦 Estoque (sistema interno)</button>
+    </div>
+
+    <div id="rel-subpage-geral">
     <div class="report-controls">
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
         <div style="display:flex;gap:8px;align-items:center">
@@ -540,6 +546,27 @@
     </div>
     <div id="rel-financeiro"></div>
     <div id="rel-comparativo"></div>
+    </div>
+
+    <div id="rel-subpage-estoque" style="display:none">
+      <div class="report-controls">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span style="font-size:0.75rem;color:var(--text2);text-transform:uppercase;letter-spacing:1px">Mensal</span>
+          <select id="relest-mes" style="max-width:180px"></select>
+          <button class="btn-primary" onclick="renderRelatorioEstoque()">📊 Gerar</button>
+          <button class="btn-export" onclick="exportarRelEstoqueCSV()">⬇ CSV (Excel)</button>
+          <button class="btn-export" onclick="exportarRelEstoquePrint()">🖨 Imprimir</button>
+        </div>
+        <div style="font-size:0.75rem;color:var(--text3);margin-top:8px">Somente movimentações de produtos cadastrados no estoque (vendas avulsas não entram aqui).</div>
+      </div>
+      <div class="report-grid" id="relest-kpis"></div>
+      <div class="panel"><div class="panel-title">Movimentações do Mês — Custo e Venda</div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Data</th><th>Código</th><th>Produto</th><th>Tipo</th><th>Qtd</th><th>Custo Unit.</th><th>Venda Unit.</th><th>Custo Total</th><th>Venda Total</th><th>Margem</th></tr></thead>
+          <tbody id="relest-tbody"></tbody>
+        </table></div>
+      </div>
+    </div>
   </div>
 
   <!-- IMPORTAÇÃO -->
@@ -795,7 +822,7 @@ function statusBadge(p){const s=getStatus(p);return s==='out'?'<span class="stat
 function nd(v){return(v&&String(v).trim()!=='')?v:'<span class="nd">—</span>';}
 function updateBadge(){const ativos=state.produtos.filter(p=>!p.arquivado);const z=ativos.filter(p=>p.estoque===0).length,b=ativos.filter(p=>p.estoque>0&&p.estoque<=p.minimo).length,r=ativos.filter(p=>daysSince(p.ultimaMov)>=60).length;document.getElementById('badge-count').textContent=z+b+r;}
 function toast(msg,type='success'){const t=document.getElementById('toast'),el=document.createElement('div');el.className=`toast-item t-${type}`;el.innerHTML=`${type==='success'?'✅':type==='error'?'❌':'⚠️'} ${msg}`;t.appendChild(el);setTimeout(()=>el.remove(),3500);}
-function baixarCSV(rows,nome){const b=new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=nome+'.csv';a.click();}
+function baixarCSV(rows,nome){const csv=rows.map(r=>r.join(';')).join('\r\n');const b=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=nome+'.csv';a.click();}
 
 // ─── NAV ──────────────────────────────────────────────────────
 function showPage(page,btn){
@@ -2074,6 +2101,119 @@ function exportarRelCSV(){
   const rows=[['Data','Código','Produto','Tipo','Qtd','Saldo','Obs'],...relAtual.map(m=>[fmtData(m.data),m.codigo,`"${m.nome}"`,m.tipo,m.qtd,m.saldo,`"${m.obs||''}"`])];
   baixarCSV(rows,'relatorio_'+sel);
   toast('Relatório CSV exportado!');
+}
+
+function showRelSubtab(tab,btn){
+  document.querySelectorAll('.rel-subtab').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  document.getElementById('rel-subpage-geral').style.display=tab==='geral'?'':'none';
+  document.getElementById('rel-subpage-estoque').style.display=tab==='estoque'?'':'none';
+  if(tab==='estoque')renderRelatorioEstoque();
+}
+
+let relEstAtual=[];
+function renderRelatorioEstoque(){
+  const movsCadastradas=state.movimentacoes.filter(m=>!m.avulso);
+  const meses=[...new Set(movsCadastradas.map(m=>getLocalMonth(m.data)))].sort().reverse();
+  const sel=document.getElementById('relest-mes');
+  const selVal=sel.value;
+  sel.innerHTML='';
+  if(meses.length)meses.forEach(m=>sel.innerHTML+=`<option value="${m}">${fmtMes(m+'-01')}</option>`);
+  else{const m=new Date().toISOString().slice(0,7);sel.innerHTML=`<option value="${m}">${fmtMes(m+'-01')}</option>`;}
+  if(selVal&&sel.querySelector(`option[value="${selVal}"]`))sel.value=selVal;
+  const mesSel=sel.value||meses[0]||new Date().toISOString().slice(0,7);
+  const movs=movsCadastradas.filter(m=>getLocalMonth(m.data)===mesSel).sort((a,b)=>a.data<b.data?-1:1);
+  relEstAtual=movs;
+
+  const ent=movs.filter(m=>m.tipo==='entrada').reduce((s,m)=>s+m.qtd,0);
+  const sai=movs.filter(m=>m.tipo==='saida').reduce((s,m)=>s+m.qtd,0);
+  let custoTotal=0,vendaTotal=0;
+  movs.filter(m=>m.tipo==='saida').forEach(m=>{
+    const p=getProd(m.codigo);
+    custoTotal+=p&&p.custo?parseFloat(p.custo)*m.qtd:0;
+    vendaTotal+=m.pagamento==='Brinde'?0:(m.valorNeg!=null?m.valorNeg:(p&&p.venda?parseFloat(p.venda)*m.qtd:0));
+  });
+  const margem=vendaTotal-custoTotal;
+  document.getElementById('relest-kpis').innerHTML=`
+    <div class="report-kpi"><div class="rv">${movs.length}</div><div class="rl">Movimentações</div></div>
+    <div class="report-kpi"><div class="rv" style="color:var(--accent2)">+${ent}</div><div class="rl">Entradas</div></div>
+    <div class="report-kpi"><div class="rv" style="color:var(--danger)">−${sai}</div><div class="rl">Saídas</div></div>
+    <div class="report-kpi"><div class="rv" style="color:var(--warn)">${fmtBRL(custoTotal)}</div><div class="rl">Custo Total</div></div>
+    <div class="report-kpi"><div class="rv" style="color:var(--accent2)">${fmtBRL(vendaTotal)}</div><div class="rl">Venda Total</div></div>
+    <div class="report-kpi"><div class="rv" style="color:${margem>=0?'var(--accent2)':'var(--danger)'}">${fmtBRL(margem)}</div><div class="rl">Margem</div></div>`;
+
+  document.getElementById('relest-tbody').innerHTML=movs.map(m=>{
+    const p=getProd(m.codigo);
+    const custoUnit=p&&p.custo!=null&&p.custo!==''?parseFloat(p.custo):null;
+    const vendaUnit=m.valorNeg!=null?m.valorNeg:(p&&p.venda!=null&&p.venda!==''?parseFloat(p.venda):null);
+    const custoTot=m.tipo==='saida'&&custoUnit!=null?custoUnit*m.qtd:null;
+    const vendaTot=m.tipo==='saida'?(m.pagamento==='Brinde'?0:(vendaUnit!=null?vendaUnit*m.qtd:null)):null;
+    const margemRow=(custoTot!=null&&vendaTot!=null)?vendaTot-custoTot:null;
+    return `<tr>
+      <td>${fmtData(m.data)}</td>
+      <td><span class="code-badge">${m.codigo}</span></td>
+      <td>${m.nome}</td>
+      <td class="${m.tipo==='entrada'?'mov-entrada':'mov-saida'}">${m.tipo==='entrada'?'Entrada':'Saída'}</td>
+      <td style="font-family:var(--mono)">${m.tipo==='entrada'?'+':'−'}${m.qtd}</td>
+      <td style="font-family:var(--mono)">${custoUnit!=null?fmtBRL(custoUnit):'—'}</td>
+      <td style="font-family:var(--mono)">${vendaUnit!=null?fmtBRL(vendaUnit):'—'}</td>
+      <td style="font-family:var(--mono);color:var(--warn)">${custoTot!=null?fmtBRL(custoTot):'—'}</td>
+      <td style="font-family:var(--mono);color:var(--accent2)">${vendaTot!=null?fmtBRL(vendaTot):'—'}</td>
+      <td style="font-family:var(--mono);color:${margemRow!=null?(margemRow>=0?'var(--accent2)':'var(--danger)'):'var(--text3)'}">${margemRow!=null?fmtBRL(margemRow):'—'}</td>
+    </tr>`;
+  }).join('')||`<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:20px">Sem dados</td></tr>`;
+}
+
+function exportarRelEstoqueCSV(){
+  if(!relEstAtual.length){toast('Nenhum dado para exportar.','warn');return;}
+  const sel=document.getElementById('relest-mes').value||'';
+  const rows=[['Data','Codigo','Produto','Tipo','Qtd','Custo Unit','Venda Unit','Custo Total','Venda Total','Margem']];
+  relEstAtual.forEach(m=>{
+    const p=getProd(m.codigo);
+    const custoUnit=p&&p.custo!=null&&p.custo!==''?parseFloat(p.custo):null;
+    const vendaUnit=m.valorNeg!=null?m.valorNeg:(p&&p.venda!=null&&p.venda!==''?parseFloat(p.venda):null);
+    const custoTot=m.tipo==='saida'&&custoUnit!=null?custoUnit*m.qtd:null;
+    const vendaTot=m.tipo==='saida'?(m.pagamento==='Brinde'?0:(vendaUnit!=null?vendaUnit*m.qtd:null)):null;
+    const margemRow=(custoTot!=null&&vendaTot!=null)?vendaTot-custoTot:null;
+    rows.push([fmtData(m.data),m.codigo,`"${(m.nome||'').replace(/"/g,'""')}"`,m.tipo==='entrada'?'Entrada':'Saida',m.qtd,
+      custoUnit!=null?custoUnit.toFixed(2).replace('.',','):'',
+      vendaUnit!=null?vendaUnit.toFixed(2).replace('.',','):'',
+      custoTot!=null?custoTot.toFixed(2).replace('.',','):'',
+      vendaTot!=null?vendaTot.toFixed(2).replace('.',','):'',
+      margemRow!=null?margemRow.toFixed(2).replace('.',','):'']);
+  });
+  baixarCSV(rows,'relatorio_estoque_'+sel);
+  toast('Relatório de Estoque CSV exportado!');
+}
+
+function exportarRelEstoquePrint(){
+  if(!relEstAtual.length){renderRelatorioEstoque();if(!relEstAtual.length){toast('Nenhum dado para exportar.','warn');return;}}
+  const sel=document.getElementById('relest-mes').value||new Date().toISOString().slice(0,7);
+  const ml=fmtMes(sel+'-01');
+  let custoTotal=0,vendaTotal=0;
+  const linhas=relEstAtual.map(m=>{
+    const p=getProd(m.codigo);
+    const custoUnit=p&&p.custo!=null&&p.custo!==''?parseFloat(p.custo):null;
+    const vendaUnit=m.valorNeg!=null?m.valorNeg:(p&&p.venda!=null&&p.venda!==''?parseFloat(p.venda):null);
+    const custoTot=m.tipo==='saida'&&custoUnit!=null?custoUnit*m.qtd:null;
+    const vendaTot=m.tipo==='saida'?(m.pagamento==='Brinde'?0:(vendaUnit!=null?vendaUnit*m.qtd:null)):null;
+    if(custoTot!=null)custoTotal+=custoTot;
+    if(vendaTot!=null)vendaTotal+=vendaTot;
+    return `<tr><td>${fmtData(m.data)}</td><td>${m.codigo}</td><td>${m.nome}</td><td>${m.tipo==='entrada'?'Entrada':'Saída'}</td><td>${m.qtd}</td><td>${custoUnit!=null?fmtBRL(custoUnit):'—'}</td><td>${vendaUnit!=null?fmtBRL(vendaUnit):'—'}</td><td>${custoTot!=null?fmtBRL(custoTot):'—'}</td><td>${vendaTot!=null?fmtBRL(vendaTot):'—'}</td></tr>`;
+  }).join('');
+  const margem=vendaTotal-custoTotal;
+  const win=window.open('','_blank');
+  win.document.write(`<html><head><title>Relatório de Estoque - ${ml}</title>
+  <style>body{font-family:Arial,sans-serif;padding:24px;color:#111}h1{font-size:18px;margin-bottom:4px}p{color:#555;font-size:13px;margin-top:0}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{border:1px solid #ccc;padding:6px 8px;font-size:12px;text-align:left}th{background:#f2f2f2}.tot{margin-top:14px;font-size:13px}</style>
+  </head><body>
+  <h1>Relatório de Estoque (Sistema Interno) — ${ml}</h1>
+  <p>Somente vendas de itens cadastrados no estoque.</p>
+  <table><thead><tr><th>Data</th><th>Código</th><th>Produto</th><th>Tipo</th><th>Qtd</th><th>Custo Unit.</th><th>Venda Unit.</th><th>Custo Total</th><th>Venda Total</th></tr></thead>
+  <tbody>${linhas}</tbody></table>
+  <div class="tot"><b>Custo Total:</b> ${fmtBRL(custoTotal)} &nbsp;&nbsp; <b>Venda Total:</b> ${fmtBRL(vendaTotal)} &nbsp;&nbsp; <b>Margem:</b> ${fmtBRL(margem)}</div>
+  </body></html>`);
+  win.document.close();
+  win.print();
 }
 
 function exportarRelPrint(){
